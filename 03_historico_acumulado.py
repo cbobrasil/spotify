@@ -24,6 +24,7 @@ Dois modos de autenticação:
 import csv
 import os
 from collections import Counter
+from datetime import datetime, timezone
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -35,7 +36,7 @@ load_dotenv()
 
 SCOPE = "user-read-recently-played"
 CSV_PATH = Path(__file__).parent / "historico.csv"
-CSV_FIELDS = ["played_at", "track_id", "track_name", "artistas", "album"]
+CSV_FIELDS = ["played_at", "track_id", "track_name", "artistas", "album", "salvo_em"]
 
 REFRESH_TOKEN = os.environ.get("SPOTIFY_REFRESH_TOKEN")
 
@@ -88,6 +89,10 @@ def salvar_novas(reproducoes, ja_existentes):
     novas = [r for r in reproducoes if r["played_at"] not in ja_existentes]
     if not novas:
         return 0
+
+    salvo_em = datetime.now(timezone.utc).isoformat()
+    for r in novas:
+        r["salvo_em"] = salvo_em
 
     arquivo_novo = not CSV_PATH.exists()
     with open(CSV_PATH, "a", newline="", encoding="utf-8") as f:
