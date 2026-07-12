@@ -1,0 +1,36 @@
+name: Atualizar histórico Spotify
+
+on:
+  schedule:
+    - cron: "0 * * * *" # a cada hora, no minuto 0
+  workflow_dispatch: {} # permite rodar manualmente pela aba Actions
+
+permissions:
+  contents: write # necessário para a Action poder commitar/dar push
+
+jobs:
+  atualizar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install -r requirements.txt
+
+      - name: Buscar reproduções recentes
+        env:
+          SPOTIPY_CLIENT_ID: ${{ secrets.SPOTIPY_CLIENT_ID }}
+          SPOTIPY_CLIENT_SECRET: ${{ secrets.SPOTIPY_CLIENT_SECRET }}
+          SPOTIFY_REFRESH_TOKEN: ${{ secrets.SPOTIFY_REFRESH_TOKEN }}
+        run: python 03_historico_acumulado.py
+
+      - name: Commitar historico.csv atualizado
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add historico.csv
+          git diff --cached --quiet || git commit -m "Atualiza historico.csv"
+          git push
