@@ -27,10 +27,13 @@ jobs:
           SPOTIFY_REFRESH_TOKEN: ${{ secrets.SPOTIFY_REFRESH_TOKEN }}
         run: python 03_historico_acumulado.py
 
-      - name: Commitar historico.csv atualizado
+      - name: Gerar dashboard
+        run: python gerar_dashboard.py
+
+      - name: Commitar historico.csv e dashboard atualizados
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add historico.csv
-          git diff --cached --quiet || git commit -m "Atualiza historico.csv"
+          git add historico.csv docs/index.html
+          git diff --cached --quiet || git commit -m "Atualiza historico.csv e dashboard"
           git push
