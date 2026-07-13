@@ -61,11 +61,19 @@ else:
     sp = spotipy.Spotify(auth_manager=auth_manager)
 
 
-def carregar_played_at_existentes():
+def chave_dedup(played_at_str, track_id):
+    """Normaliza pro segundo (sem milissegundos), já que reproduções
+    importadas do export completo do Spotify usam precisão diferente
+    da API 'recently played'."""
+    dt = datetime.fromisoformat(played_at_str.replace("Z", "+00:00"))
+    return (dt.replace(microsecond=0).isoformat(), track_id)
+
+
+def carregar_linhas_existentes():
     if not CSV_PATH.exists():
-        return set()
+        return []
     with open(CSV_PATH, newline="", encoding="utf-8") as f:
-        return {linha["played_at"] for linha in csv.DictReader(f)}
+        return list(csv.DictReader(f))
 
 
 def buscar_reproducoes_recentes():
@@ -85,22 +93,30 @@ def buscar_reproducoes_recentes():
     return reproducoes
 
 
-def salvar_novas(reproducoes, ja_existentes):
-    novas = [r for r in reproducoes if r["played_at"] not in ja_existentes]
-    if not novas:
-        return 0
+def salvar_novas(reproducoes, linhas_existentes):
+    vistos = {
+        chave_dedup(linha["played_at"], linha["track_id"]): linha for linha in linhas_existentes
+    }
 
     salvo_em = datetime.now(timezone.utc).isoformat()
-    for r in novas:
+    qtd_novas = 0
+    for r in reproducoes:
+        chave = chave_dedup(r["played_at"], r["track_id"])
+        if chave in vistos:
+            continue
         r["salvo_em"] = salvo_em
+        vistos[chave] = r
+        qtd_novas += 1
 
-    arquivo_novo = not CSV_PATH.exists()
-    with open(CSV_PATH, "a", newline="", encoding="utf-8") as f:
+    if qtd_novas == 0:
+        return 0
+
+    todas = sorted(vistos.values(), key=lambda l: l["played_at"], reverse=True)
+    with open(CSV_PATH, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=CSV_FIELDS)
-        if arquivo_novo:
-            writer.writeheader()
-        writer.writerows(novas)
-    return len(novas)
+        writer.writeheader()
+        writer.writerows(todas)
+    return qtd_novas
 
 
 def mostrar_ranking():
@@ -114,8 +130,8 @@ def mostrar_ranking():
 
 
 if __name__ == "__main__":
-    ja_existentes = carregar_played_at_existentes()
+    linhas_existentes = carregar_linhas_existentes()
     reproducoes = buscar_reproducoes_recentes()
-    qtd_novas = salvar_novas(reproducoes, ja_existentes)
+    qtd_novas = salvar_novas(reproducoes, linhas_existentes)
     print(f"{qtd_novas} nova(s) reprodução(ões) adicionada(s) a {CSV_PATH.name}")
     mostrar_ranking()

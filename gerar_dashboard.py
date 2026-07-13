@@ -12,7 +12,7 @@ import csv
 import html
 import math
 from collections import Counter, defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -77,54 +77,98 @@ def calcular_heatmap(linhas):
     return matriz, maximo
 
 
-def dias_no_periodo(primeiro, ultimo):
-    dias = []
-    d = primeiro
-    while d <= ultimo:
-        dias.append(d)
-        d = d.fromordinal(d.toordinal() + 1)
-    return dias
+GRANULARIDADE_LABEL = {"dia": "dia", "semana": "semana", "mes": "mês"}
+GRANULARIDADE_FORMATO = {"dia": "%d/%m", "semana": "%d/%m", "mes": "%m/%Y"}
 
 
-def calcular_serie_diaria(linhas, dias):
-    contagem = Counter(linha["dt_local"].date() for linha in linhas)
-    return [(d, contagem.get(d, 0)) for d in dias]
+def escolher_granularidade(primeiro, ultimo):
+    """Poucos dias de dado -> agrupa por dia. Conforme o histórico cresce
+    (meses, anos), passamos a agrupar por semana e depois por mês, senão
+    o gráfico vira uma sopa de milhares de pontos ilegível."""
+    total_dias = (ultimo - primeiro).days
+    if total_dias <= 60:
+        return "dia"
+    if total_dias <= 550:
+        return "semana"
+    return "mes"
 
 
-def calcular_top_artistas_series(linhas, dias, n=4):
+def bucket_de(data, granularidade):
+    if granularidade == "dia":
+        return data
+    if granularidade == "semana":
+        return data - timedelta(days=data.weekday())
+    return data.replace(day=1)
+
+
+def proximo_bucket(atual, granularidade):
+    if granularidade == "dia":
+        return atual + timedelta(days=1)
+    if granularidade == "semana":
+        return atual + timedelta(days=7)
+    if atual.month == 12:
+        return atual.replace(year=atual.year + 1, month=1)
+    return atual.replace(month=atual.month + 1)
+
+
+def fim_do_bucket(inicio, granularidade):
+    if granularidade in ("dia", "semana"):
+        return proximo_bucket(inicio, granularidade) - timedelta(days=1)
+    proximo_mes = proximo_bucket(inicio, granularidade)
+    return proximo_mes - timedelta(days=1)
+
+
+def gerar_buckets(primeiro, ultimo, granularidade):
+    buckets = []
+    atual = bucket_de(primeiro, granularidade)
+    fim = bucket_de(ultimo, granularidade)
+    while atual <= fim:
+        buckets.append(atual)
+        atual = proximo_bucket(atual, granularidade)
+    return buckets
+
+
+def calcular_serie_diaria(linhas, buckets, granularidade):
+    contagem = Counter(bucket_de(linha["dt_local"].date(), granularidade) for linha in linhas)
+    return [(b, contagem.get(b, 0)) for b in buckets]
+
+
+def calcular_top_artistas_series(linhas, buckets, granularidade, n=4):
     total_por_artista = Counter(linha["artistas"] for linha in linhas)
     top = [nome for nome, _ in total_por_artista.most_common(n)]
 
-    por_artista_dia = defaultdict(Counter)
+    por_artista_bucket = defaultdict(Counter)
     for linha in linhas:
-        por_artista_dia[linha["artistas"]][linha["dt_local"].date()] += 1
+        b = bucket_de(linha["dt_local"].date(), granularidade)
+        por_artista_bucket[linha["artistas"]][b] += 1
 
     series = []
     for nome in top:
-        pontos = [(d, por_artista_dia[nome].get(d, 0)) for d in dias]
+        pontos = [(b, por_artista_bucket[nome].get(b, 0)) for b in buckets]
         series.append({"nome": nome, "pontos": pontos, "total": total_por_artista[nome]})
     return series
 
 
-def calcular_diversidade(linhas, dias):
-    linhas_por_dia = defaultdict(list)
-    for linha in linhas:
-        linhas_por_dia[linha["dt_local"].date()].append(linha)
-
+def calcular_diversidade(linhas, buckets, granularidade):
+    linhas_ordenadas = sorted(linhas, key=lambda l: l["dt_local"])
     vistos_tracks, vistos_artistas = set(), set()
     tracks_acumulado, artistas_acumulado = [], []
-    for d in dias:
-        for linha in linhas_por_dia.get(d, []):
-            vistos_tracks.add(linha["track_id"])
-            vistos_artistas.add(linha["artistas"])
-        tracks_acumulado.append((d, len(vistos_tracks)))
-        artistas_acumulado.append((d, len(vistos_artistas)))
+
+    idx, n = 0, len(linhas_ordenadas)
+    for b in buckets:
+        fim = fim_do_bucket(b, granularidade)
+        while idx < n and linhas_ordenadas[idx]["dt_local"].date() <= fim:
+            vistos_tracks.add(linhas_ordenadas[idx]["track_id"])
+            vistos_artistas.add(linhas_ordenadas[idx]["artistas"])
+            idx += 1
+        tracks_acumulado.append((b, len(vistos_tracks)))
+        artistas_acumulado.append((b, len(vistos_artistas)))
     return tracks_acumulado, artistas_acumulado
 
 
 # ---------- SVG ----------
 
-def svg_linha(series, largura=720, altura=200, pad_esq=36, pad_dir=16, pad_topo=16, pad_baixo=28):
+def svg_linha(series, largura=720, altura=200, pad_esq=36, pad_dir=16, pad_topo=16, pad_baixo=28, formato_data="%d/%m"):
     todos_valores = [v for s in series for _, v in s["pontos"]]
     y_max = teto_bonito(max(todos_valores, default=1))
     n_pontos = len(series[0]["pontos"]) if series else 0
@@ -179,7 +223,7 @@ def svg_linha(series, largura=720, altura=200, pad_esq=36, pad_dir=16, pad_topo=
 
         # pontos com <title> para hover nativo
         for (data_pt, valor_pt), (x, y) in zip(pontos, coords):
-            titulo = escapar(f"{s['nome']} — {data_pt.strftime('%d/%m')}: {valor_pt}")
+            titulo = escapar(f"{s['nome']} — {data_pt.strftime(formato_data)}: {valor_pt}")
             partes.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="8" fill="transparent"><title>{titulo}</title></circle>')
 
         # rótulo direto no fim da linha
@@ -188,14 +232,15 @@ def svg_linha(series, largura=720, altura=200, pad_esq=36, pad_dir=16, pad_topo=
             f'<text x="{x_fim + 6:.1f}" y="{y_fim + 4:.1f}" class="rotulo-direto">{s["pontos"][-1][1]}</text>'
         )
 
-    # eixo x: poucas datas (início, meio, fim)
+    # eixo x: algumas datas espaçadas (evita amontoar rótulos)
     if n_pontos > 0:
-        indices_rotulo = sorted({0, n_pontos // 2, n_pontos - 1})
+        n_ticks = min(5, n_pontos)
+        indices_rotulo = sorted({round(i * (n_pontos - 1) / max(n_ticks - 1, 1)) for i in range(n_ticks)})
         for i in indices_rotulo:
             x = x_de(i)
             data_pt = series[0]["pontos"][i][0]
             partes.append(
-                f'<text x="{x:.1f}" y="{altura - 6}" text-anchor="middle" class="rotulo-eixo">{data_pt.strftime("%d/%m")}</text>'
+                f'<text x="{x:.1f}" y="{altura - 6}" text-anchor="middle" class="rotulo-eixo">{data_pt.strftime(formato_data)}</text>'
             )
 
     corpo = "\n".join(partes)
@@ -256,12 +301,15 @@ def stat_tile(label, valor, pequeno=False):
 
 def montar_html(linhas):
     stats = calcular_stats(linhas)
-    dias = dias_no_periodo(stats["primeiro_dia"], stats["ultimo_dia"]) if linhas else []
+    granularidade = escolher_granularidade(stats["primeiro_dia"], stats["ultimo_dia"]) if linhas else "dia"
+    buckets = gerar_buckets(stats["primeiro_dia"], stats["ultimo_dia"], granularidade) if linhas else []
+    formato_data = GRANULARIDADE_FORMATO[granularidade]
+    rotulo_granularidade = GRANULARIDADE_LABEL[granularidade]
 
     heatmap_matriz, heatmap_max = calcular_heatmap(linhas)
-    serie_total = calcular_serie_diaria(linhas, dias)
-    top_artistas = calcular_top_artistas_series(linhas, dias, n=4)
-    tracks_acum, artistas_acum = calcular_diversidade(linhas, dias)
+    serie_total = calcular_serie_diaria(linhas, buckets, granularidade)
+    top_artistas = calcular_top_artistas_series(linhas, buckets, granularidade, n=4)
+    tracks_acum, artistas_acum = calcular_diversidade(linhas, buckets, granularidade)
 
     top_musicas = Counter((l["track_name"], l["artistas"]) for l in linhas).most_common(15)
     linhas_tabela = "".join(
@@ -270,7 +318,7 @@ def montar_html(linhas):
     )
 
     periodo = (
-        f'{stats["primeiro_dt"].strftime("%d/%m %H:%M")} — {stats["ultimo_dt"].strftime("%d/%m %H:%M")}'
+        f'{stats["primeiro_dt"].strftime("%d/%m/%Y %H:%M")} — {stats["ultimo_dt"].strftime("%d/%m/%Y %H:%M")}'
         if linhas
         else "sem dados"
     )
@@ -285,7 +333,7 @@ def montar_html(linhas):
     )
 
     grafico_total = (
-        svg_linha([{"nome": "Reproduções/dia", "pontos": serie_total}])
+        svg_linha([{"nome": f"Reproduções/{rotulo_granularidade}", "pontos": serie_total}], formato_data=formato_data)
         if serie_total
         else "<p class='vazio'>Sem dados ainda.</p>"
     )
@@ -293,7 +341,7 @@ def montar_html(linhas):
     subgraficos_artistas = "".join(
         f'''<div class="subchart">
           <h3>{escapar(s["nome"])} <span class="muted">({s["total"]}x)</span></h3>
-          {svg_linha([s], altura=140)}
+          {svg_linha([s], altura=140, formato_data=formato_data)}
         </div>'''
         for s in top_artistas
     )
@@ -302,7 +350,9 @@ def montar_html(linhas):
         {"nome": "Músicas descobertas (acumulado)", "pontos": tracks_acum},
         {"nome": "Artistas descobertos (acumulado)", "pontos": artistas_acum},
     ]
-    grafico_diversidade = svg_linha(serie_diversidade) if linhas else "<p class='vazio'>Sem dados ainda.</p>"
+    grafico_diversidade = (
+        svg_linha(serie_diversidade, formato_data=formato_data) if linhas else "<p class='vazio'>Sem dados ainda.</p>"
+    )
 
     agora = datetime.now(TIMEZONE).strftime("%d/%m/%Y %H:%M")
 
@@ -371,7 +421,7 @@ def montar_html(linhas):
   </section>
 
   <section>
-    <h2>Reproduções por dia</h2>
+    <h2>Reproduções por {rotulo_granularidade}</h2>
     {grafico_total}
   </section>
 
