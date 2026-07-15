@@ -1,439 +1,186 @@
 """
 Gera um dashboard estático (docs/index.html) a partir do historico.csv.
 
+Diferente da primeira versão, aqui o Python só prepara os dados
+(compactados em JSON, embutidos na página) — todo o cálculo dos
+gráficos e o filtro de datas rodam em JavaScript no navegador. Isso é
+necessário porque o filtro de período precisa recalcular tudo
+dinamicamente, e um site estático não tem servidor pra fazer isso sob
+demanda.
+
 Rodado localmente ou pela Action do GitHub (que também publica o
 resultado via GitHub Pages, servindo a pasta docs/ da branch main).
 
-Ajuste TIMEZONE abaixo se "Padrões de horário/dia" não bater com o seu
-fuso horário real.
+Ajuste TIMEZONE abaixo se os gráficos de horário/dia não baterem com o
+seu fuso horário real.
 """
 
 import csv
-import html
-import math
-from collections import Counter, defaultdict
-from datetime import datetime, timedelta
+import json
+from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
 TIMEZONE = ZoneInfo("Europe/Lisbon")
 CSV_PATH = Path(__file__).parent / "historico.csv"
 OUT_PATH = Path(__file__).parent / "docs" / "index.html"
-DIAS_SEMANA = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
-
-# Paleta validada (dataviz skill) — ver referencia em references/palette.md
-CORES_CATEGORICAS = ["#2a78d6", "#1baf7a", "#eda100", "#008300"]  # blue, aqua, yellow, green
 
 
 def carregar_linhas():
     with open(CSV_PATH, newline="", encoding="utf-8") as f:
-        linhas = list(csv.DictReader(f))
+        return list(csv.DictReader(f))
+
+
+def preparar_dados(linhas):
+    """Compacta o histórico em duas estruturas pequenas:
+    - tracks: tabela de músicas únicas (evita repetir nome/artista em cada play)
+    - plays: [ordinal_dia_local, hora_local, minuto_local, indice_da_track]
+
+    O "ordinal" é o número de dias desde 01/01/ano 1 (mesmo esquema do
+    date.toordinal() do Python) já convertido pro fuso local — assim o
+    JavaScript faz toda a matemática de calendário (dia da semana, mês,
+    filtro por período) sem precisar lidar com fuso horário de verdade."""
+    indice = {}
+    tracks = []
+    plays = []
     for linha in linhas:
         dt_utc = datetime.fromisoformat(linha["played_at"].replace("Z", "+00:00"))
-        linha["dt_local"] = dt_utc.astimezone(TIMEZONE)
-    return linhas
+        dt_local = dt_utc.astimezone(TIMEZONE)
 
+        track_id = linha["track_id"]
+        if track_id not in indice:
+            indice[track_id] = len(tracks)
+            duration_ms = int(linha["duration_ms"]) if linha.get("duration_ms") else 0
+            tracks.append([track_id, linha["track_name"], linha["artistas"], duration_ms])
 
-def compacto(n):
-    if n < 1000:
-        return str(n)
-    if n < 1_000_000:
-        return f"{n / 1000:.1f}K".replace(".0K", "K")
-    return f"{n / 1_000_000:.1f}M".replace(".0M", "M")
+        plays.append([dt_local.date().toordinal(), dt_local.hour, dt_local.minute, indice[track_id]])
+    return tracks, plays
 
 
-def teto_bonito(valor):
-    if valor <= 0:
-        return 1
-    exp = math.floor(math.log10(valor))
-    base = 10**exp
-    for m in (1, 2, 5, 10):
-        if valor <= m * base:
-            return m * base
-    return 10 * base
+def json_seguro(obj):
+    """json.dumps compacto, escapando '</' pra não fechar a tag <script> sem querer."""
+    return json.dumps(obj, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
 
 
-# ---------- agregações ----------
-
-def calcular_stats(linhas):
-    dts = [linha["dt_local"] for linha in linhas]
-    return {
-        "total_reproducoes": len(linhas),
-        "artistas_unicos": len({linha["artistas"] for linha in linhas}),
-        "musicas_unicas": len({linha["track_id"] for linha in linhas}),
-        "primeiro_dt": min(dts) if dts else None,
-        "ultimo_dt": max(dts) if dts else None,
-        "primeiro_dia": min(dts).date() if dts else None,
-        "ultimo_dia": max(dts).date() if dts else None,
-    }
-
-
-def calcular_heatmap(linhas):
-    matriz = [[0] * 24 for _ in range(7)]
-    for linha in linhas:
-        dt = linha["dt_local"]
-        matriz[dt.weekday()][dt.hour] += 1
-    maximo = max((max(linha) for linha in matriz), default=0)
-    return matriz, maximo
-
-
-GRANULARIDADE_LABEL = {"dia": "dia", "semana": "semana", "mes": "mês"}
-GRANULARIDADE_FORMATO = {"dia": "%d/%m", "semana": "%d/%m", "mes": "%m/%Y"}
-
-
-def escolher_granularidade(primeiro, ultimo):
-    """Poucos dias de dado -> agrupa por dia. Conforme o histórico cresce
-    (meses, anos), passamos a agrupar por semana e depois por mês, senão
-    o gráfico vira uma sopa de milhares de pontos ilegível."""
-    total_dias = (ultimo - primeiro).days
-    if total_dias <= 60:
-        return "dia"
-    if total_dias <= 550:
-        return "semana"
-    return "mes"
-
-
-def bucket_de(data, granularidade):
-    if granularidade == "dia":
-        return data
-    if granularidade == "semana":
-        return data - timedelta(days=data.weekday())
-    return data.replace(day=1)
-
-
-def proximo_bucket(atual, granularidade):
-    if granularidade == "dia":
-        return atual + timedelta(days=1)
-    if granularidade == "semana":
-        return atual + timedelta(days=7)
-    if atual.month == 12:
-        return atual.replace(year=atual.year + 1, month=1)
-    return atual.replace(month=atual.month + 1)
-
-
-def fim_do_bucket(inicio, granularidade):
-    if granularidade in ("dia", "semana"):
-        return proximo_bucket(inicio, granularidade) - timedelta(days=1)
-    proximo_mes = proximo_bucket(inicio, granularidade)
-    return proximo_mes - timedelta(days=1)
-
-
-def gerar_buckets(primeiro, ultimo, granularidade):
-    buckets = []
-    atual = bucket_de(primeiro, granularidade)
-    fim = bucket_de(ultimo, granularidade)
-    while atual <= fim:
-        buckets.append(atual)
-        atual = proximo_bucket(atual, granularidade)
-    return buckets
-
-
-def calcular_serie_diaria(linhas, buckets, granularidade):
-    contagem = Counter(bucket_de(linha["dt_local"].date(), granularidade) for linha in linhas)
-    return [(b, contagem.get(b, 0)) for b in buckets]
-
-
-def calcular_top_artistas_series(linhas, buckets, granularidade, n=4):
-    total_por_artista = Counter(linha["artistas"] for linha in linhas)
-    top = [nome for nome, _ in total_por_artista.most_common(n)]
-
-    por_artista_bucket = defaultdict(Counter)
-    for linha in linhas:
-        b = bucket_de(linha["dt_local"].date(), granularidade)
-        por_artista_bucket[linha["artistas"]][b] += 1
-
-    series = []
-    for nome in top:
-        pontos = [(b, por_artista_bucket[nome].get(b, 0)) for b in buckets]
-        series.append({"nome": nome, "pontos": pontos, "total": total_por_artista[nome]})
-    return series
-
-
-def calcular_diversidade(linhas, buckets, granularidade):
-    linhas_ordenadas = sorted(linhas, key=lambda l: l["dt_local"])
-    vistos_tracks, vistos_artistas = set(), set()
-    tracks_acumulado, artistas_acumulado = [], []
-
-    idx, n = 0, len(linhas_ordenadas)
-    for b in buckets:
-        fim = fim_do_bucket(b, granularidade)
-        while idx < n and linhas_ordenadas[idx]["dt_local"].date() <= fim:
-            vistos_tracks.add(linhas_ordenadas[idx]["track_id"])
-            vistos_artistas.add(linhas_ordenadas[idx]["artistas"])
-            idx += 1
-        tracks_acumulado.append((b, len(vistos_tracks)))
-        artistas_acumulado.append((b, len(vistos_artistas)))
-    return tracks_acumulado, artistas_acumulado
-
-
-# ---------- SVG ----------
-
-def svg_linha(series, largura=720, altura=200, pad_esq=36, pad_dir=16, pad_topo=16, pad_baixo=28, formato_data="%d/%m"):
-    todos_valores = [v for s in series for _, v in s["pontos"]]
-    y_max = teto_bonito(max(todos_valores, default=1))
-    n_pontos = len(series[0]["pontos"]) if series else 0
-
-    area_w = largura - pad_esq - pad_dir
-    area_h = altura - pad_topo - pad_baixo
-
-    def x_de(i):
-        if n_pontos <= 1:
-            return pad_esq + area_w / 2
-        return pad_esq + (area_w * i / (n_pontos - 1))
-
-    def y_de(v):
-        return pad_topo + area_h - (area_h * v / y_max if y_max else 0)
-
-    partes = []
-    # gridlines horizontais (0, meio, topo)
-    for frac in (0, 0.5, 1):
-        y = pad_topo + area_h * (1 - frac)
-        valor = round(y_max * frac)
-        partes.append(
-            f'<line x1="{pad_esq}" y1="{y:.1f}" x2="{largura - pad_dir}" y2="{y:.1f}" '
-            f'stroke="var(--grid)" stroke-width="1"/>'
-        )
-        partes.append(
-            f'<text x="{pad_esq - 8}" y="{y + 4:.1f}" text-anchor="end" '
-            f'class="rotulo-eixo">{valor}</text>'
-        )
-
-    for idx, s in enumerate(series):
-        cor = f"var(--series-{idx + 1})"
-        pontos = s["pontos"]
-        if not pontos:
-            continue
-        coords = [(x_de(i), y_de(v)) for i, (_, v) in enumerate(pontos)]
-
-        if len(coords) == 1:
-            x, y = coords[0]
-            partes.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="4" fill="{cor}" stroke="var(--surface-1)" stroke-width="2"/>')
-        else:
-            path_linha = "M " + " L ".join(f"{x:.1f},{y:.1f}" for x, y in coords)
-            baseline = pad_topo + area_h
-            path_area = (
-                f"M {coords[0][0]:.1f},{baseline:.1f} "
-                + " L ".join(f"{x:.1f},{y:.1f}" for x, y in coords)
-                + f" L {coords[-1][0]:.1f},{baseline:.1f} Z"
-            )
-            partes.append(f'<path d="{path_area}" fill="{cor}" opacity="0.10" stroke="none"/>')
-            partes.append(f'<path d="{path_linha}" fill="none" stroke="{cor}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>')
-            x_fim, y_fim = coords[-1]
-            partes.append(f'<circle cx="{x_fim:.1f}" cy="{y_fim:.1f}" r="4" fill="{cor}" stroke="var(--surface-1)" stroke-width="2"/>')
-
-        # pontos com <title> para hover nativo
-        for (data_pt, valor_pt), (x, y) in zip(pontos, coords):
-            titulo = escapar(f"{s['nome']} — {data_pt.strftime(formato_data)}: {valor_pt}")
-            partes.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="8" fill="transparent"><title>{titulo}</title></circle>')
-
-        # rótulo direto no fim da linha
-        x_fim, y_fim = coords[-1]
-        partes.append(
-            f'<text x="{x_fim + 6:.1f}" y="{y_fim + 4:.1f}" class="rotulo-direto">{s["pontos"][-1][1]}</text>'
-        )
-
-    # eixo x: algumas datas espaçadas (evita amontoar rótulos)
-    if n_pontos > 0:
-        n_ticks = min(5, n_pontos)
-        indices_rotulo = sorted({round(i * (n_pontos - 1) / max(n_ticks - 1, 1)) for i in range(n_ticks)})
-        for i in indices_rotulo:
-            x = x_de(i)
-            data_pt = series[0]["pontos"][i][0]
-            partes.append(
-                f'<text x="{x:.1f}" y="{altura - 6}" text-anchor="middle" class="rotulo-eixo">{data_pt.strftime(formato_data)}</text>'
-            )
-
-    corpo = "\n".join(partes)
-    return f'<svg viewBox="0 0 {largura} {altura}" class="grafico">{corpo}</svg>'
-
-
-def svg_heatmap(matriz, maximo, largura=720):
-    cel = (largura - 60) / 24
-    altura = 7 * (cel + 2) + 40
-    ramp = ["#cde2fb", "#9ec5f4", "#6da7ec", "#3987e5", "#256abf", "#184f95", "#0d366b"]
-
-    partes = []
-    for linha_idx, linha in enumerate(matriz):
-        y = linha_idx * (cel + 2) + 10
-        partes.append(f'<text x="44" y="{y + cel / 2 + 4:.1f}" text-anchor="end" class="rotulo-eixo">{DIAS_SEMANA[linha_idx]}</text>')
-        for hora, valor in enumerate(linha):
-            x = 50 + hora * (cel + 2)
-            if maximo == 0:
-                cor = "var(--surface-1)"
-            else:
-                passo = min(len(ramp) - 1, round((valor / maximo) * (len(ramp) - 1)))
-                cor = ramp[passo] if valor > 0 else "var(--surface-1)"
-            titulo = escapar(f"{DIAS_SEMANA[linha_idx]} {hora:02d}h: {valor} reprodução(ões)")
-            partes.append(
-                f'<rect x="{x:.1f}" y="{y:.1f}" width="{cel:.1f}" height="{cel:.1f}" rx="3" '
-                f'fill="{cor}" stroke="var(--border)" stroke-width="1"><title>{titulo}</title></rect>'
-            )
-
-    for hora in (0, 6, 12, 18, 23):
-        x = 50 + hora * (cel + 2) + cel / 2
-        partes.append(f'<text x="{x:.1f}" y="{altura - 6}" text-anchor="middle" class="rotulo-eixo">{hora}h</text>')
-
-    corpo = "\n".join(partes)
-    return f'<svg viewBox="0 0 {largura} {altura:.0f}" class="grafico">{corpo}</svg>'
-
-
-def legenda(series):
-    itens = "".join(
-        f'<span class="legenda-item"><i style="background:var(--series-{i + 1})"></i>{escapar(s["nome"])}</span>'
-        for i, s in enumerate(series)
-    )
-    return f'<div class="legenda">{itens}</div>' if len(series) > 1 else ""
-
-
-def escapar(s):
-    return html.escape(str(s))
-
-
-def stat_tile(label, valor, pequeno=False):
-    classe = "tile-valor tile-valor-pequeno" if pequeno else "tile-valor"
-    return f'''<div class="tile">
-      <div class="tile-label">{escapar(label)}</div>
-      <div class="{classe}">{escapar(valor)}</div>
-    </div>'''
-
-
-# ---------- montagem da página ----------
-
-def montar_html(linhas):
-    stats = calcular_stats(linhas)
-    granularidade = escolher_granularidade(stats["primeiro_dia"], stats["ultimo_dia"]) if linhas else "dia"
-    buckets = gerar_buckets(stats["primeiro_dia"], stats["ultimo_dia"], granularidade) if linhas else []
-    formato_data = GRANULARIDADE_FORMATO[granularidade]
-    rotulo_granularidade = GRANULARIDADE_LABEL[granularidade]
-
-    heatmap_matriz, heatmap_max = calcular_heatmap(linhas)
-    serie_total = calcular_serie_diaria(linhas, buckets, granularidade)
-    top_artistas = calcular_top_artistas_series(linhas, buckets, granularidade, n=4)
-    tracks_acum, artistas_acum = calcular_diversidade(linhas, buckets, granularidade)
-
-    top_musicas = Counter((l["track_name"], l["artistas"]) for l in linhas).most_common(15)
-    linhas_tabela = "".join(
-        f"<tr><td>{escapar(nome)}</td><td>{escapar(art)}</td><td>{vezes}</td></tr>"
-        for (nome, art), vezes in top_musicas
-    )
-
-    periodo = (
-        f'{stats["primeiro_dt"].strftime("%d/%m/%Y %H:%M")} — {stats["ultimo_dt"].strftime("%d/%m/%Y %H:%M")}'
-        if linhas
-        else "sem dados"
-    )
-
-    tiles = "".join(
-        [
-            stat_tile("Reproduções registradas", compacto(stats["total_reproducoes"])),
-            stat_tile("Artistas únicos", compacto(stats["artistas_unicos"])),
-            stat_tile("Músicas únicas", compacto(stats["musicas_unicas"])),
-            stat_tile("Período coberto", periodo, pequeno=True),
-        ]
-    )
-
-    grafico_total = (
-        svg_linha([{"nome": f"Reproduções/{rotulo_granularidade}", "pontos": serie_total}], formato_data=formato_data)
-        if serie_total
-        else "<p class='vazio'>Sem dados ainda.</p>"
-    )
-
-    subgraficos_artistas = "".join(
-        f'''<div class="subchart">
-          <h3>{escapar(s["nome"])} <span class="muted">({s["total"]}x)</span></h3>
-          {svg_linha([s], altura=140, formato_data=formato_data)}
-        </div>'''
-        for s in top_artistas
-    )
-
-    serie_diversidade = [
-        {"nome": "Músicas descobertas (acumulado)", "pontos": tracks_acum},
-        {"nome": "Artistas descobertos (acumulado)", "pontos": artistas_acum},
-    ]
-    grafico_diversidade = (
-        svg_linha(serie_diversidade, formato_data=formato_data) if linhas else "<p class='vazio'>Sem dados ainda.</p>"
-    )
-
-    agora = datetime.now(TIMEZONE).strftime("%d/%m/%Y %H:%M")
-
-    return f"""<!doctype html>
+HTML_TEMPLATE = """<!doctype html>
 <html lang="pt-br">
 <head>
 <meta charset="utf-8">
 <title>Meu histórico Spotify</title>
 <style>
-  :root {{
+  :root {
     --page: #f9f9f7; --surface-1: #fcfcfb;
     --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #898781;
     --grid: #e1e0d9; --baseline: #c3c2b7; --border: rgba(11,11,11,0.10);
     --series-1: #2a78d6; --series-2: #1baf7a; --series-3: #eda100; --series-4: #008300;
-  }}
-  @media (prefers-color-scheme: dark) {{
-    :root {{
+    --accent-bg: #eaf1fc; --accent-border: #2a78d6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
       --page: #0d0d0d; --surface-1: #1a1a19;
       --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #898781;
       --grid: #2c2c2a; --baseline: #383835; --border: rgba(255,255,255,0.10);
       --series-1: #3987e5; --series-2: #199e70; --series-3: #c98500; --series-4: #008300;
-    }}
-  }}
-  * {{ box-sizing: border-box; }}
-  body {{
+      --accent-bg: #16324f; --accent-border: #3987e5;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
     margin: 0; padding: 24px; background: var(--page); color: var(--text-primary);
     font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-  }}
-  .wrap {{ max-width: 780px; margin: 0 auto; }}
-  h1 {{ font-size: 22px; margin: 0 0 4px; }}
-  .subtitulo {{ color: var(--text-secondary); font-size: 13px; margin: 0 0 24px; }}
-  .tiles {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 28px; }}
-  .tile {{ background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }}
-  .tile-label {{ font-size: 12px; color: var(--text-secondary); }}
-  .tile-valor {{ font-size: 24px; font-weight: 600; margin-top: 4px; }}
-  .tile-valor-pequeno {{ font-size: 16px; }}
-  section {{ background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; margin-bottom: 20px; }}
-  section h2 {{ font-size: 15px; margin: 0 0 12px; }}
-  .grafico {{ width: 100%; height: auto; display: block; }}
-  .rotulo-eixo {{ font-size: 10px; fill: var(--text-muted); }}
-  .rotulo-direto {{ font-size: 11px; fill: var(--text-secondary); font-weight: 600; }}
-  .legenda {{ display: flex; gap: 14px; margin-bottom: 10px; flex-wrap: wrap; }}
-  .legenda-item {{ display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); }}
-  .legenda-item i {{ width: 10px; height: 10px; border-radius: 2px; display: inline-block; }}
-  .subcharts {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }}
-  .subchart h3 {{ font-size: 13px; margin: 0 0 6px; font-weight: 600; }}
-  .muted {{ color: var(--text-muted); font-weight: 400; }}
-  .vazio {{ color: var(--text-muted); font-size: 13px; }}
-  table {{ width: 100%; border-collapse: collapse; font-size: 13px; }}
-  th, td {{ text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--grid); }}
-  th {{ color: var(--text-secondary); font-weight: 600; }}
-  td:last-child, th:last-child {{ text-align: right; font-variant-numeric: tabular-nums; }}
-  details summary {{ cursor: pointer; font-size: 13px; color: var(--text-secondary); }}
+  }
+  .wrap { max-width: 780px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .subtitulo { color: var(--text-secondary); font-size: 13px; margin: 0 0 20px; }
+  .filtros {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px;
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px 14px; margin-bottom: 20px;
+  }
+  .filtros-presets { display: flex; flex-wrap: wrap; gap: 6px; }
+  .filtros-presets button {
+    font: inherit; font-size: 12px; padding: 6px 10px; border-radius: 999px;
+    border: 1px solid var(--border); background: transparent; color: var(--text-secondary);
+    cursor: pointer;
+  }
+  .filtros-presets button:hover { background: var(--grid); }
+  .filtros-presets button.ativo {
+    background: var(--accent-bg); border-color: var(--accent-border);
+    color: var(--text-primary); font-weight: 600;
+  }
+  .filtros-custom {
+    display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary);
+    padding-left: 12px; border-left: 1px solid var(--border);
+  }
+  .filtros-custom input[type="date"] {
+    font: inherit; font-size: 12px; padding: 5px 6px; border-radius: 6px;
+    border: 1px solid var(--border); background: var(--page); color: var(--text-primary);
+  }
+  .data-preview { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .filtros-custom button {
+    font: inherit; font-size: 12px; padding: 6px 10px; border-radius: 6px;
+    border: 1px solid var(--accent-border); background: var(--accent-bg); color: var(--text-primary);
+    cursor: pointer;
+  }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 28px; }
+  .tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .tile-label { font-size: 12px; color: var(--text-secondary); }
+  .tile-valor { font-size: 24px; font-weight: 600; margin-top: 4px; }
+  .tile-valor-pequeno { font-size: 16px; }
+  section { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; margin-bottom: 20px; }
+  section h2 { font-size: 15px; margin: 0 0 12px; }
+  .grafico { width: 100%; height: auto; display: block; }
+  .rotulo-eixo { font-size: 10px; fill: var(--text-muted); }
+  .rotulo-direto { font-size: 11px; fill: var(--text-secondary); font-weight: 600; }
+  .subcharts { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+  .subchart h3 { font-size: 13px; margin: 0 0 6px; font-weight: 600; }
+  .muted { color: var(--text-muted); font-weight: 400; }
+  .vazio { color: var(--text-muted); font-size: 13px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--grid); }
+  th { color: var(--text-secondary); font-weight: 600; }
+  td:last-child, th:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+  details summary { cursor: pointer; font-size: 13px; color: var(--text-secondary); }
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>Meu histórico Spotify</h1>
-  <p class="subtitulo">Atualizado em {agora} · fuso {TIMEZONE.key}</p>
+  <p class="subtitulo">Atualizado em __GERADO_EM__ · fuso __TIMEZONE_KEY__</p>
 
-  <div class="tiles">{tiles}</div>
+  <div class="filtros">
+    <div class="filtros-presets">
+      <button data-preset="7">7 dias</button>
+      <button data-preset="30">30 dias</button>
+      <button data-preset="90">90 dias</button>
+      <button data-preset="ano">Este ano</button>
+      <button data-preset="tudo" class="ativo">Tudo</button>
+    </div>
+    <div class="filtros-custom">
+      <input type="date" id="data-inicio" lang="pt-BR" aria-label="Data inicial">
+      <span class="data-preview" id="preview-inicio"></span>
+      <span>até</span>
+      <input type="date" id="data-fim" lang="pt-BR" aria-label="Data final">
+      <span class="data-preview" id="preview-fim"></span>
+      <button id="aplicar-custom" type="button">Aplicar</button>
+    </div>
+  </div>
+
+  <div class="tiles" id="tiles"></div>
 
   <section>
     <h2>Quando eu mais ouço música</h2>
-    {svg_heatmap(heatmap_matriz, heatmap_max)}
+    <div id="heatmap"></div>
   </section>
 
   <section>
-    <h2>Reproduções por {rotulo_granularidade}</h2>
-    {grafico_total}
+    <h2 id="titulo-serie">Reproduções</h2>
+    <div id="grafico-total"></div>
   </section>
 
   <section>
-    <h2>Top artistas ao longo do tempo</h2>
-    <div class="subcharts">{subgraficos_artistas}</div>
-  </section>
-
-  <section>
-    <h2>Descobrindo música nova</h2>
-    {legenda(serie_diversidade)}
-    {grafico_diversidade}
+    <h2>Top artistas no período</h2>
+    <div class="subcharts" id="subcharts-artistas"></div>
   </section>
 
   <section>
@@ -442,11 +189,447 @@ def montar_html(linhas):
       <summary>Ver dados</summary>
       <table>
         <thead><tr><th>Música</th><th>Artista(s)</th><th>Vezes</th></tr></thead>
-        <tbody>{linhas_tabela}</tbody>
+        <tbody id="tabela-musicas"></tbody>
       </table>
     </details>
   </section>
 </div>
+
+<script>
+(function () {
+  "use strict";
+  const TRACKS = __TRACKS_JSON__;
+  const PLAYS = __PLAYS_JSON__;
+
+  const DIAS_SEMANA = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+  const SEQ_RAMP = ["#cde2fb", "#9ec5f4", "#6da7ec", "#3987e5", "#256abf", "#184f95", "#0d366b"];
+  const EPOCH_ORDINAL = 719163; // ordinal (estilo Python) de 1970-01-01
+  const FORMATO_ROTULO = { dia: "dia", semana: "semana", mes: "mês" };
+
+  function ordinalParaData(ordinal) {
+    return new Date((ordinal - EPOCH_ORDINAL) * 86400000);
+  }
+  function dataParaOrdinal(ano, mes0, dia) {
+    return Math.floor(Date.UTC(ano, mes0, dia) / 86400000) + EPOCH_ORDINAL;
+  }
+  function weekdayDe(ordinal) {
+    return (ordinalParaData(ordinal).getUTCDay() + 6) % 7; // 0=Seg .. 6=Dom
+  }
+  function anoMesDe(ordinal) {
+    const d = ordinalParaData(ordinal);
+    return [d.getUTCFullYear(), d.getUTCMonth()];
+  }
+
+  function escapar(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
+  function compacto(n) {
+    if (n < 1000) return String(n);
+    if (n < 1000000) return (n / 1000).toFixed(1).replace(".0", "") + "K";
+    return (n / 1000000).toFixed(1).replace(".0", "") + "M";
+  }
+
+  function tetoBonito(valor) {
+    if (valor <= 0) return 1;
+    const exp = Math.floor(Math.log10(valor));
+    const base = Math.pow(10, exp);
+    for (const m of [1, 2, 5, 10]) {
+      if (valor <= m * base) return m * base;
+    }
+    return 10 * base;
+  }
+
+  function escolherGranularidade(inicio, fim) {
+    const totalDias = fim - inicio;
+    if (totalDias <= 60) return "dia";
+    if (totalDias <= 550) return "semana";
+    return "mes";
+  }
+
+  function bucketDe(ordinal, granularidade) {
+    if (granularidade === "dia") return ordinal;
+    if (granularidade === "semana") return ordinal - weekdayDe(ordinal);
+    const [ano, mes0] = anoMesDe(ordinal);
+    return dataParaOrdinal(ano, mes0, 1);
+  }
+
+  function proximoBucket(ordinal, granularidade) {
+    if (granularidade === "dia") return ordinal + 1;
+    if (granularidade === "semana") return ordinal + 7;
+    const [ano, mes0] = anoMesDe(ordinal);
+    if (mes0 === 11) return dataParaOrdinal(ano + 1, 0, 1);
+    return dataParaOrdinal(ano, mes0 + 1, 1);
+  }
+
+  function gerarBuckets(inicio, fim, granularidade) {
+    const buckets = [];
+    let atual = bucketDe(inicio, granularidade);
+    const fimBucket = bucketDe(fim, granularidade);
+    while (atual <= fimBucket) {
+      buckets.push(atual);
+      atual = proximoBucket(atual, granularidade);
+    }
+    return buckets;
+  }
+
+  function formatarData(ordinal, granularidade) {
+    const d = ordinalParaData(ordinal);
+    const dd = String(d.getUTCDate()).padStart(2, "0");
+    const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+    if (granularidade === "mes") return mm + "/" + d.getUTCFullYear();
+    return dd + "/" + mm;
+  }
+
+  function compararPlay(a, b) {
+    if (a[0] !== b[0]) return a[0] - b[0];
+    if (a[1] !== b[1]) return a[1] - b[1];
+    return a[2] - b[2];
+  }
+
+  function formatarPlayCompleto(p) {
+    const d = ordinalParaData(p[0]);
+    const dd = String(d.getUTCDate()).padStart(2, "0");
+    const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+    const hh = String(p[1]).padStart(2, "0");
+    const mi = String(p[2]).padStart(2, "0");
+    return dd + "/" + mm + "/" + d.getUTCFullYear() + " " + hh + ":" + mi;
+  }
+
+  function filtrarPlays(inicio, fim) {
+    return PLAYS.filter((p) => p[0] >= inicio && p[0] <= fim);
+  }
+
+  function calcularStats(plays) {
+    if (plays.length === 0) {
+      return { total: 0, artistasUnicos: 0, musicasUnicas: 0, tempoMs: 0, primeiro: null, ultimo: null };
+    }
+    const artistas = new Set();
+    const musicas = new Set();
+    let tempoMs = 0;
+    let primeiro = plays[0];
+    let ultimo = plays[0];
+    for (const p of plays) {
+      const t = TRACKS[p[3]];
+      musicas.add(t[0]);
+      artistas.add(t[2]);
+      tempoMs += t[3] || 0;
+      if (compararPlay(p, primeiro) < 0) primeiro = p;
+      if (compararPlay(p, ultimo) > 0) ultimo = p;
+    }
+    return { total: plays.length, artistasUnicos: artistas.size, musicasUnicas: musicas.size, tempoMs, primeiro, ultimo };
+  }
+
+  function formatarDuracaoStat(ms) {
+    const minutosTotais = Math.round(ms / 60000);
+    const dias = Math.floor(minutosTotais / (60 * 24));
+    const horas = Math.floor((minutosTotais % (60 * 24)) / 60);
+    const minutos = minutosTotais % 60;
+    if (dias > 0) return `${dias}d ${horas}h`;
+    if (horas > 0) return `${horas}h ${minutos}min`;
+    return `${minutos}min`;
+  }
+
+  function formatarDuracaoCompacta(ms) {
+    const minutosTotais = Math.round(ms / 60000);
+    const horas = Math.floor(minutosTotais / 60);
+    const minutos = minutosTotais % 60;
+    if (horas > 0) return `${horas}h${String(minutos).padStart(2, "0")}`;
+    return `${minutos}min`;
+  }
+
+  function calcularHeatmap(plays) {
+    const matriz = Array.from({ length: 7 }, () => new Array(24).fill(0));
+    const matrizMs = Array.from({ length: 7 }, () => new Array(24).fill(0));
+    for (const p of plays) {
+      const wd = weekdayDe(p[0]);
+      matriz[wd][p[1]]++;
+      matrizMs[wd][p[1]] += TRACKS[p[3]][3] || 0;
+    }
+    let maximo = 0;
+    for (const linha of matriz) for (const v of linha) if (v > maximo) maximo = v;
+    return { matriz, matrizMs, maximo };
+  }
+
+  function calcularSeriePorBucket(plays, buckets, granularidade) {
+    const contagem = new Map();
+    for (const p of plays) {
+      const b = bucketDe(p[0], granularidade);
+      contagem.set(b, (contagem.get(b) || 0) + 1);
+    }
+    return buckets.map((b) => [b, contagem.get(b) || 0]);
+  }
+
+  function calcularTopArtistas(plays, buckets, granularidade, n) {
+    const totalPorArtista = new Map();
+    for (const p of plays) {
+      const artista = TRACKS[p[3]][2];
+      totalPorArtista.set(artista, (totalPorArtista.get(artista) || 0) + 1);
+    }
+    const top = [...totalPorArtista.entries()].sort((a, b) => b[1] - a[1]).slice(0, n).map((e) => e[0]);
+
+    const porArtistaBucket = new Map();
+    for (const nome of top) porArtistaBucket.set(nome, new Map());
+    for (const p of plays) {
+      const artista = TRACKS[p[3]][2];
+      if (!porArtistaBucket.has(artista)) continue;
+      const b = bucketDe(p[0], granularidade);
+      const mapa = porArtistaBucket.get(artista);
+      mapa.set(b, (mapa.get(b) || 0) + 1);
+    }
+
+    return top.map((nome) => ({
+      nome,
+      total: totalPorArtista.get(nome),
+      pontos: buckets.map((b) => [b, porArtistaBucket.get(nome).get(b) || 0]),
+    }));
+  }
+
+  function topMusicas(plays, n) {
+    const contagem = new Map();
+    for (const p of plays) {
+      const t = TRACKS[p[3]];
+      const chave = t[1] + "\\u0001" + t[2];
+      contagem.set(chave, (contagem.get(chave) || 0) + 1);
+    }
+    return [...contagem.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, n)
+      .map(([chave, vezes]) => {
+        const [nome, artistas] = chave.split("\\u0001");
+        return [nome, artistas, vezes];
+      });
+  }
+
+  function svgLinha(series, opts) {
+    opts = opts || {};
+    const largura = opts.largura || 720;
+    const altura = opts.altura || 200;
+    const padEsq = 36, padDir = 16, padTopo = 16, padBaixo = 28;
+    const granularidade = opts.granularidade || "dia";
+
+    const todosValores = [];
+    for (const s of series) for (const pt of s.pontos) todosValores.push(pt[1]);
+    const yMax = tetoBonito(todosValores.length ? Math.max(...todosValores) : 1);
+    const nPontos = series.length ? series[0].pontos.length : 0;
+
+    const areaW = largura - padEsq - padDir;
+    const areaH = altura - padTopo - padBaixo;
+
+    function xDe(i) {
+      if (nPontos <= 1) return padEsq + areaW / 2;
+      return padEsq + (areaW * i) / (nPontos - 1);
+    }
+    function yDe(v) {
+      return padTopo + areaH - (yMax ? (areaH * v) / yMax : 0);
+    }
+
+    const partes = [];
+    [0, 0.5, 1].forEach((frac) => {
+      const y = padTopo + areaH * (1 - frac);
+      const valor = Math.round(yMax * frac);
+      partes.push(`<line x1="${padEsq}" y1="${y.toFixed(1)}" x2="${largura - padDir}" y2="${y.toFixed(1)}" stroke="var(--grid)" stroke-width="1"/>`);
+      partes.push(`<text x="${padEsq - 8}" y="${(y + 4).toFixed(1)}" text-anchor="end" class="rotulo-eixo">${valor}</text>`);
+    });
+
+    series.forEach((s, idx) => {
+      const cor = `var(--series-${idx + 1})`;
+      const pontos = s.pontos;
+      if (!pontos.length) return;
+      const coords = pontos.map((pt, i) => [xDe(i), yDe(pt[1])]);
+
+      if (coords.length === 1) {
+        const [x, y] = coords[0];
+        partes.push(`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4" fill="${cor}" stroke="var(--surface-1)" stroke-width="2"/>`);
+      } else {
+        const pathLinha = "M " + coords.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" L ");
+        const baseline = padTopo + areaH;
+        const pathArea =
+          `M ${coords[0][0].toFixed(1)},${baseline.toFixed(1)} L ` +
+          coords.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" L ") +
+          ` L ${coords[coords.length - 1][0].toFixed(1)},${baseline.toFixed(1)} Z`;
+        partes.push(`<path d="${pathArea}" fill="${cor}" opacity="0.10" stroke="none"/>`);
+        partes.push(`<path d="${pathLinha}" fill="none" stroke="${cor}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`);
+        const [xf, yf] = coords[coords.length - 1];
+        partes.push(`<circle cx="${xf.toFixed(1)}" cy="${yf.toFixed(1)}" r="4" fill="${cor}" stroke="var(--surface-1)" stroke-width="2"/>`);
+      }
+
+      pontos.forEach((pt, i) => {
+        const [x, y] = coords[i];
+        const titulo = escapar(`${s.nome} — ${formatarData(pt[0], granularidade)}: ${pt[1]}`);
+        partes.push(`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="8" fill="transparent"><title>${titulo}</title></circle>`);
+      });
+
+      const [xf, yf] = coords[coords.length - 1];
+      partes.push(`<text x="${(xf + 6).toFixed(1)}" y="${(yf + 4).toFixed(1)}" class="rotulo-direto">${pontos[pontos.length - 1][1]}</text>`);
+    });
+
+    if (nPontos > 0) {
+      const nTicks = Math.min(5, nPontos);
+      const indicesSet = new Set();
+      for (let i = 0; i < nTicks; i++) indicesSet.add(Math.round((i * (nPontos - 1)) / Math.max(nTicks - 1, 1)));
+      [...indicesSet].sort((a, b) => a - b).forEach((i) => {
+        const x = xDe(i);
+        const bucket = series[0].pontos[i][0];
+        partes.push(`<text x="${x.toFixed(1)}" y="${altura - 6}" text-anchor="middle" class="rotulo-eixo">${formatarData(bucket, granularidade)}</text>`);
+      });
+    }
+
+    return `<svg viewBox="0 0 ${largura} ${altura}" class="grafico">${partes.join("\\n")}</svg>`;
+  }
+
+  function svgHeatmap(matriz, matrizMs, maximo, largura) {
+    largura = largura || 720;
+    const cel = (largura - 60) / 24;
+    const altura = 7 * (cel + 2) + 40;
+    const partes = [];
+    matriz.forEach((linha, linhaIdx) => {
+      const y = linhaIdx * (cel + 2) + 10;
+      partes.push(`<text x="44" y="${(y + cel / 2 + 4).toFixed(1)}" text-anchor="end" class="rotulo-eixo">${DIAS_SEMANA[linhaIdx]}</text>`);
+      linha.forEach((valor, hora) => {
+        const x = 50 + hora * (cel + 2);
+        let cor = "var(--surface-1)";
+        if (maximo > 0 && valor > 0) {
+          const passo = Math.min(SEQ_RAMP.length - 1, Math.round((valor / maximo) * (SEQ_RAMP.length - 1)));
+          cor = SEQ_RAMP[passo];
+        }
+        const tempo = formatarDuracaoCompacta(matrizMs[linhaIdx][hora]);
+        const titulo = escapar(`${DIAS_SEMANA[linhaIdx]} ${String(hora).padStart(2, "0")}h: ${valor} reprodução(ões) · ${tempo}`);
+        partes.push(`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${cel.toFixed(1)}" height="${cel.toFixed(1)}" rx="3" fill="${cor}" stroke="var(--border)" stroke-width="1"><title>${titulo}</title></rect>`);
+      });
+    });
+    [0, 6, 12, 18, 23].forEach((hora) => {
+      const x = 50 + hora * (cel + 2) + cel / 2;
+      partes.push(`<text x="${x.toFixed(1)}" y="${altura - 6}" text-anchor="middle" class="rotulo-eixo">${hora}h</text>`);
+    });
+    return `<svg viewBox="0 0 ${largura} ${altura.toFixed(0)}" class="grafico">${partes.join("\\n")}</svg>`;
+  }
+
+  function statTile(label, valor, pequeno) {
+    const classe = pequeno ? "tile-valor tile-valor-pequeno" : "tile-valor";
+    return `<div class="tile"><div class="tile-label">${escapar(label)}</div><div class="${classe}">${escapar(valor)}</div></div>`;
+  }
+
+  let dadosMinOrdinal = Infinity;
+  let dadosMaxOrdinal = -Infinity;
+  for (const p of PLAYS) {
+    if (p[0] < dadosMinOrdinal) dadosMinOrdinal = p[0];
+    if (p[0] > dadosMaxOrdinal) dadosMaxOrdinal = p[0];
+  }
+
+  function renderizar(inicio, fim) {
+    const plays = filtrarPlays(inicio, fim);
+    const stats = calcularStats(plays);
+    const granularidade = plays.length ? escolherGranularidade(inicio, fim) : "dia";
+    const buckets = plays.length ? gerarBuckets(inicio, fim, granularidade) : [];
+
+    document.getElementById("tiles").innerHTML = [
+      statTile("Reproduções registradas", compacto(stats.total)),
+      statTile("Tempo ouvido", stats.total ? formatarDuracaoStat(stats.tempoMs) : "sem dados"),
+      statTile("Artistas únicos", compacto(stats.artistasUnicos)),
+      statTile("Músicas únicas", compacto(stats.musicasUnicas)),
+      statTile("Período coberto", stats.total ? formatarPlayCompleto(stats.primeiro) + " — " + formatarPlayCompleto(stats.ultimo) : "sem dados", true),
+    ].join("");
+
+    const { matriz, matrizMs, maximo } = calcularHeatmap(plays);
+    document.getElementById("heatmap").innerHTML = plays.length ? svgHeatmap(matriz, matrizMs, maximo) : "<p class='vazio'>Sem dados no período.</p>";
+
+    document.getElementById("titulo-serie").textContent = "Reproduções por " + (FORMATO_ROTULO[granularidade] || "dia");
+    const serieTotal = plays.length ? calcularSeriePorBucket(plays, buckets, granularidade) : [];
+    document.getElementById("grafico-total").innerHTML = serieTotal.length
+      ? svgLinha([{ nome: "Reproduções", pontos: serieTotal }], { granularidade })
+      : "<p class='vazio'>Sem dados no período.</p>";
+
+    const topArtistas = plays.length ? calcularTopArtistas(plays, buckets, granularidade, 4) : [];
+    document.getElementById("subcharts-artistas").innerHTML = topArtistas
+      .map(
+        (s) => `
+      <div class="subchart">
+        <h3>${escapar(s.nome)} <span class="muted">(${s.total}x)</span></h3>
+        ${svgLinha([s], { altura: 140, granularidade })}
+      </div>`
+      )
+      .join("");
+
+    const musicas = topMusicas(plays, 15);
+    document.getElementById("tabela-musicas").innerHTML = musicas
+      .map(([nome, art, vezes]) => `<tr><td>${escapar(nome)}</td><td>${escapar(art)}</td><td>${vezes}</td></tr>`)
+      .join("");
+  }
+
+  const botoesPreset = document.querySelectorAll("[data-preset]");
+  const inputInicio = document.getElementById("data-inicio");
+  const inputFim = document.getElementById("data-fim");
+  const previewInicio = document.getElementById("preview-inicio");
+  const previewFim = document.getElementById("preview-fim");
+
+  function formatarInputDateBr(valor) {
+    if (!valor) return "";
+    const [ano, mes, dia] = valor.split("-");
+    return dia + "/" + mes + "/" + ano;
+  }
+
+  function atualizarPreviews() {
+    previewInicio.textContent = formatarInputDateBr(inputInicio.value);
+    previewFim.textContent = formatarInputDateBr(inputFim.value);
+  }
+
+  inputInicio.addEventListener("change", atualizarPreviews);
+  inputFim.addEventListener("change", atualizarPreviews);
+
+  function marcarAtivo(botao) {
+    botoesPreset.forEach((b) => b.classList.remove("ativo"));
+    if (botao) botao.classList.add("ativo");
+  }
+
+  function hojeOrdinal() {
+    const partes = new Intl.DateTimeFormat("en-CA", { timeZone: "__TIMEZONE_KEY__" }).format(new Date());
+    const [ano, mes, dia] = partes.split("-").map(Number);
+    return dataParaOrdinal(ano, mes - 1, dia);
+  }
+
+  function ordinalParaInputDate(ordinal) {
+    const d = ordinalParaData(ordinal);
+    return d.getUTCFullYear() + "-" + String(d.getUTCMonth() + 1).padStart(2, "0") + "-" + String(d.getUTCDate()).padStart(2, "0");
+  }
+
+  botoesPreset.forEach((botao) => {
+    botao.addEventListener("click", () => {
+      const preset = botao.dataset.preset;
+      const hoje = Math.min(hojeOrdinal(), dadosMaxOrdinal);
+      let inicio;
+      let fim = hoje;
+      if (preset === "tudo") {
+        inicio = dadosMinOrdinal;
+        fim = dadosMaxOrdinal;
+      } else if (preset === "ano") {
+        inicio = dataParaOrdinal(ordinalParaData(hoje).getUTCFullYear(), 0, 1);
+      } else {
+        inicio = hoje - Number(preset) + 1;
+      }
+      inicio = Math.max(inicio, dadosMinOrdinal);
+      inputInicio.value = ordinalParaInputDate(inicio);
+      inputFim.value = ordinalParaInputDate(fim);
+      atualizarPreviews();
+      marcarAtivo(botao);
+      renderizar(inicio, fim);
+    });
+  });
+
+  document.getElementById("aplicar-custom").addEventListener("click", () => {
+    if (!inputInicio.value || !inputFim.value) return;
+    const [ai, am, ad] = inputInicio.value.split("-").map(Number);
+    const [bi, bm, bd] = inputFim.value.split("-").map(Number);
+    marcarAtivo(null);
+    renderizar(dataParaOrdinal(ai, am - 1, ad), dataParaOrdinal(bi, bm - 1, bd));
+  });
+
+  inputInicio.value = ordinalParaInputDate(dadosMinOrdinal);
+  inputFim.value = ordinalParaInputDate(dadosMaxOrdinal);
+  atualizarPreviews();
+  renderizar(dadosMinOrdinal, dadosMaxOrdinal);
+})();
+</script>
 </body>
 </html>
 """
@@ -454,6 +637,16 @@ def montar_html(linhas):
 
 if __name__ == "__main__":
     linhas = carregar_linhas()
+    tracks, plays = preparar_dados(linhas)
+
+    agora = datetime.now(TIMEZONE).strftime("%d/%m/%Y %H:%M")
+    html = (
+        HTML_TEMPLATE.replace("__TRACKS_JSON__", json_seguro(tracks))
+        .replace("__PLAYS_JSON__", json_seguro(plays))
+        .replace("__GERADO_EM__", agora)
+        .replace("__TIMEZONE_KEY__", TIMEZONE.key)
+    )
+
     OUT_PATH.parent.mkdir(exist_ok=True)
-    OUT_PATH.write_text(montar_html(linhas), encoding="utf-8")
-    print(f"Dashboard gerado em {OUT_PATH}")
+    OUT_PATH.write_text(html, encoding="utf-8")
+    print(f"Dashboard gerado em {OUT_PATH} ({len(linhas)} reproduções, {len(tracks)} músicas únicas)")
