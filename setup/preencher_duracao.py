@@ -3,7 +3,7 @@ Script one-off: busca a duração (duration_ms) de cada música única já
 presente no historico.csv e preenche essa coluna, usando sp.tracks()
 em lotes de 50 (limite da API por chamada).
 
-Rode uma vez. Músicas novas capturadas pelo 03_historico_acumulado.py
+Rode uma vez. Músicas novas capturadas pelo historico_acumulado.py
 já vêm com a duração direto na resposta do "recently played", sem
 precisar rodar isto de novo — só é útil se aparecer alguma linha
 antiga sem duration_ms preenchido.
@@ -19,7 +19,7 @@ from spotipy.oauth2 import SpotifyOAuth
 
 load_dotenv()
 
-CSV_PATH = Path(__file__).parent / "historico.csv"
+CSV_PATH = Path(__file__).parent.parent / "historico.csv"
 CSV_FIELDS = ["played_at", "track_id", "track_name", "artistas", "album", "duration_ms", "salvo_em"]
 SCOPE = "user-read-recently-played"
 

@@ -25,7 +25,7 @@ jobs:
           SPOTIPY_CLIENT_ID: ${{ secrets.SPOTIPY_CLIENT_ID }}
           SPOTIPY_CLIENT_SECRET: ${{ secrets.SPOTIPY_CLIENT_SECRET }}
           SPOTIFY_REFRESH_TOKEN: ${{ secrets.SPOTIFY_REFRESH_TOKEN }}
-        run: python 03_historico_acumulado.py
+        run: python historico_acumulado.py
 
       - name: Gerar dashboard
         run: python gerar_dashboard.py

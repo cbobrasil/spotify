@@ -1,7 +1,6 @@
 """
-Terceiro script: como o Spotify não expõe contagem histórica de "quantas
-vezes ouvi essa música", a saída é construir nosso próprio histórico aos
-poucos.
+Como o Spotify não expõe contagem histórica de "quantas vezes ouvi essa
+música", a saída é construir nosso próprio histórico aos poucos.
 
 A cada execução, este script busca as últimas 50 reproduções
 (current_user_recently_played) e adiciona ao arquivo historico.csv as
