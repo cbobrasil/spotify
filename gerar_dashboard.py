@@ -33,7 +33,7 @@ def carregar_linhas():
 
 def preparar_dados(linhas):
     """Compacta o histórico em duas estruturas pequenas:
-    - tracks: tabela de músicas únicas (evita repetir nome/artista em cada play)
+    - tracks: tabela de músicas únicas (evita repetir nome/artista/álbum em cada play)
     - plays: [ordinal_dia_local, hora_local, minuto_local, indice_da_track]
 
     O "ordinal" é o número de dias desde 01/01/ano 1 (mesmo esquema do
@@ -51,7 +51,7 @@ def preparar_dados(linhas):
         if track_id not in indice:
             indice[track_id] = len(tracks)
             duration_ms = int(linha["duration_ms"]) if linha.get("duration_ms") else 0
-            tracks.append([track_id, linha["track_name"], linha["artistas"], duration_ms])
+            tracks.append([track_id, linha["track_name"], linha["artistas"], duration_ms, linha["album"]])
 
         plays.append([dt_local.date().toordinal(), dt_local.hour, dt_local.minute, indice[track_id]])
     return tracks, plays
@@ -141,6 +141,9 @@ HTML_TEMPLATE = """<!doctype html>
   th { color: var(--text-secondary); font-weight: 600; }
   td:last-child, th:last-child { text-align: right; font-variant-numeric: tabular-nums; }
   details summary { cursor: pointer; font-size: 13px; color: var(--text-secondary); }
+  .comparacao-tiles { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 14px; }
+  .comparacao-tiles .tile { flex: 1; min-width: 180px; }
+  .delta { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
 </style>
 </head>
 <body>
@@ -168,9 +171,19 @@ HTML_TEMPLATE = """<!doctype html>
 
   <div class="tiles" id="tiles"></div>
 
+  <section id="secao-comparacao">
+    <h2>Comparado ao período anterior</h2>
+    <div id="comparacao"></div>
+  </section>
+
   <section>
     <h2>Quando eu mais ouço música</h2>
     <div id="heatmap"></div>
+  </section>
+
+  <section>
+    <h2>Dia da semana</h2>
+    <div id="grafico-dia-semana"></div>
   </section>
 
   <section>
@@ -190,6 +203,17 @@ HTML_TEMPLATE = """<!doctype html>
       <table>
         <thead><tr><th>Música</th><th>Artista(s)</th><th>Vezes</th></tr></thead>
         <tbody id="tabela-musicas"></tbody>
+      </table>
+    </details>
+  </section>
+
+  <section>
+    <h2>Top 15 álbuns (tabela)</h2>
+    <details open>
+      <summary>Ver dados</summary>
+      <table>
+        <thead><tr><th>Álbum</th><th>Artista(s)</th><th>Vezes</th></tr></thead>
+        <tbody id="tabela-albuns"></tbody>
       </table>
     </details>
   </section>
@@ -392,6 +416,75 @@ HTML_TEMPLATE = """<!doctype html>
     return { matriz, matrizMs, maximo };
   }
 
+  function calcularPorDiaSemana(plays) {
+    const contagem = new Array(7).fill(0);
+    const duracao = new Array(7).fill(0);
+    for (const p of plays) {
+      const wd = weekdayDe(p[0]);
+      contagem[wd]++;
+      duracao[wd] += TRACKS[p[3]][3] || 0;
+    }
+    return { contagem, duracao };
+  }
+
+  function calcularStreaks(plays) {
+    if (!plays.length) return { atual: 0, recorde: 0 };
+    const dias = [...new Set(plays.map((p) => p[0]))].sort((a, b) => a - b);
+    let recorde = 1;
+    let atual = 1;
+    for (let i = 1; i < dias.length; i++) {
+      atual = dias[i] === dias[i - 1] + 1 ? atual + 1 : 1;
+      if (atual > recorde) recorde = atual;
+    }
+    return { atual, recorde };
+  }
+
+  function topAlbuns(plays, n) {
+    const contagem = new Map();
+    for (const p of plays) {
+      const t = TRACKS[p[3]];
+      const album = t[4];
+      if (!album) continue;
+      const chave = album + "\\u0001" + t[2];
+      contagem.set(chave, (contagem.get(chave) || 0) + 1);
+    }
+    return [...contagem.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, n)
+      .map(([chave, vezes]) => {
+        const [album, artistas] = chave.split("\\u0001");
+        return [album, artistas, vezes];
+      });
+  }
+
+  function contarPorArtista(plays) {
+    const m = new Map();
+    for (const p of plays) {
+      const artista = TRACKS[p[3]][2];
+      m.set(artista, (m.get(artista) || 0) + 1);
+    }
+    return m;
+  }
+
+  /* Compara o período filtrado com o período imediatamente anterior, de
+     mesma duração (ex: filtrando "últimos 30 dias", compara com os 30
+     dias antes disso) — funciona com qualquer preset ou range custom. */
+  function calcularComparacao(inicio, fim) {
+    const duracaoDias = fim - inicio;
+    const fimAnterior = inicio - 1;
+    const inicioAnterior = fimAnterior - duracaoDias;
+    if (fimAnterior < dadosMinOrdinal) return null;
+    const plays = filtrarPlays(Math.max(inicioAnterior, dadosMinOrdinal), fimAnterior);
+    return { inicioAnterior, fimAnterior, plays };
+  }
+
+  function formatarDelta(atual, anterior) {
+    if (anterior === 0) return atual > 0 ? "novo" : "—";
+    const pct = Math.round(((atual - anterior) / anterior) * 100);
+    if (pct === 0) return "sem mudança";
+    return (pct > 0 ? "+" : "") + pct + "% vs período anterior";
+  }
+
   function calcularSeriePorBucket(plays, buckets, granularidade) {
     const contagem = new Map();
     const duracao = new Map();
@@ -550,9 +643,45 @@ HTML_TEMPLATE = """<!doctype html>
     return `<svg viewBox="0 0 ${largura} ${altura.toFixed(0)}" class="grafico">${partes.join("\\n")}</svg>`;
   }
 
+  function svgBarras(valores, valoresMs, rotulos, largura) {
+    largura = largura || 720;
+    const altura = 180;
+    const padEsq = 36, padDir = 16, padTopo = 12, padBaixo = 28;
+    const areaW = largura - padEsq - padDir;
+    const areaH = altura - padTopo - padBaixo;
+    const n = valores.length;
+    const maximo = tetoBonito(Math.max(...valores, 1));
+    const slot = areaW / n;
+    const largBarra = Math.min(28, slot - 10);
+
+    const partes = [];
+    [0, 0.5, 1].forEach((frac) => {
+      const y = padTopo + areaH * (1 - frac);
+      const valor = Math.round(maximo * frac);
+      partes.push(`<line x1="${padEsq}" y1="${y.toFixed(1)}" x2="${largura - padDir}" y2="${y.toFixed(1)}" stroke="var(--grid)" stroke-width="1"/>`);
+      partes.push(`<text x="${padEsq - 8}" y="${(y + 4).toFixed(1)}" text-anchor="end" class="rotulo-eixo">${valor}</text>`);
+    });
+
+    valores.forEach((v, i) => {
+      const cx = padEsq + slot * i + slot / 2;
+      const h = maximo ? (areaH * v) / maximo : 0;
+      const y = padTopo + areaH - h;
+      const tempo = formatarDuracaoCompacta(valoresMs[i] || 0);
+      const titulo = escapar(`${rotulos[i]}: ${v} reprodução(ões) · ${tempo}`);
+      partes.push(`<rect x="${(cx - largBarra / 2).toFixed(1)}" y="${y.toFixed(1)}" width="${largBarra.toFixed(1)}" height="${Math.max(h, 0).toFixed(1)}" rx="4" fill="var(--series-1)"><title>${titulo}</title></rect>`);
+      partes.push(`<text x="${cx.toFixed(1)}" y="${altura - 6}" text-anchor="middle" class="rotulo-eixo">${rotulos[i]}</text>`);
+    });
+
+    return `<svg viewBox="0 0 ${largura} ${altura}" class="grafico">${partes.join("\\n")}</svg>`;
+  }
+
   function statTile(label, valor, pequeno) {
     const classe = pequeno ? "tile-valor tile-valor-pequeno" : "tile-valor";
     return `<div class="tile"><div class="tile-label">${escapar(label)}</div><div class="${classe}">${escapar(valor)}</div></div>`;
+  }
+
+  function tileComDelta(label, valor, deltaTexto) {
+    return `<div class="tile"><div class="tile-label">${escapar(label)}</div><div class="tile-valor">${escapar(valor)}</div><div class="delta">${escapar(deltaTexto)}</div></div>`;
   }
 
   let dadosMinOrdinal = Infinity;
@@ -565,19 +694,56 @@ HTML_TEMPLATE = """<!doctype html>
   function renderizar(inicio, fim) {
     const plays = filtrarPlays(inicio, fim);
     const stats = calcularStats(plays);
+    const streaks = calcularStreaks(plays);
     const granularidade = plays.length ? escolherGranularidade(inicio, fim) : "dia";
     const buckets = plays.length ? gerarBuckets(inicio, fim, granularidade) : [];
 
     document.getElementById("tiles").innerHTML = [
       statTile("Reproduções registradas", compacto(stats.total)),
       statTile("Tempo ouvido", stats.total ? formatarDuracaoStat(stats.tempoMs) : "sem dados"),
+      statTile("Sequência atual", stats.total ? `${streaks.atual} dia(s)` : "sem dados"),
+      statTile("Maior sequência", stats.total ? `${streaks.recorde} dia(s)` : "sem dados"),
       statTile("Artistas únicos", compacto(stats.artistasUnicos)),
       statTile("Músicas únicas", compacto(stats.musicasUnicas)),
       statTile("Período coberto", stats.total ? formatarPlayCompleto(stats.primeiro) + " — " + formatarPlayCompleto(stats.ultimo) : "sem dados", true),
     ].join("");
 
+    const comparacao = calcularComparacao(inicio, fim);
+    if (!plays.length || !comparacao) {
+      document.getElementById("comparacao").innerHTML = "<p class='vazio'>Sem período anterior suficiente pra comparar.</p>";
+    } else {
+      const statsAnterior = calcularStats(comparacao.plays);
+      const artistasAtual = contarPorArtista(plays);
+      const artistasAnterior = contarPorArtista(comparacao.plays);
+      const topAtual = [...artistasAtual.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+      const tiles = [
+        tileComDelta("Reproduções", compacto(stats.total), formatarDelta(stats.total, statsAnterior.total)),
+        tileComDelta("Tempo ouvido", formatarDuracaoStat(stats.tempoMs), formatarDelta(stats.tempoMs, statsAnterior.tempoMs)),
+      ].join("");
+
+      const linhas = topAtual
+        .map(([nome, vezes]) => {
+          const anterior = artistasAnterior.get(nome) || 0;
+          return `<tr><td>${escapar(nome)}</td><td>${vezes}</td><td>${anterior}</td></tr>`;
+        })
+        .join("");
+
+      document.getElementById("comparacao").innerHTML = `
+        <div class="comparacao-tiles">${tiles}</div>
+        <table>
+          <thead><tr><th>Artista (top 5 no período)</th><th>Este período</th><th>Anterior</th></tr></thead>
+          <tbody>${linhas}</tbody>
+        </table>`;
+    }
+
     const { matriz, matrizMs, maximo } = calcularHeatmap(plays);
     document.getElementById("heatmap").innerHTML = plays.length ? svgHeatmap(matriz, matrizMs, maximo) : "<p class='vazio'>Sem dados no período.</p>";
+
+    const porDiaSemana = calcularPorDiaSemana(plays);
+    document.getElementById("grafico-dia-semana").innerHTML = plays.length
+      ? svgBarras(porDiaSemana.contagem, porDiaSemana.duracao, DIAS_SEMANA)
+      : "<p class='vazio'>Sem dados no período.</p>";
 
     document.getElementById("titulo-serie").textContent = "Reproduções por " + (FORMATO_ROTULO[granularidade] || "dia");
     const serieTotal = plays.length ? calcularSeriePorBucket(plays, buckets, granularidade) : [];
@@ -598,6 +764,11 @@ HTML_TEMPLATE = """<!doctype html>
 
     const musicas = topMusicas(plays, 15);
     document.getElementById("tabela-musicas").innerHTML = musicas
+      .map(([nome, art, vezes]) => `<tr><td>${escapar(nome)}</td><td>${escapar(art)}</td><td>${vezes}</td></tr>`)
+      .join("");
+
+    const albuns = topAlbuns(plays, 15);
+    document.getElementById("tabela-albuns").innerHTML = albuns
       .map(([nome, art, vezes]) => `<tr><td>${escapar(nome)}</td><td>${escapar(art)}</td><td>${vezes}</td></tr>`)
       .join("");
   }
