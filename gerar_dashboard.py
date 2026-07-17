@@ -281,6 +281,47 @@ HTML_TEMPLATE = """<!doctype html>
     return dd + "/" + mm;
   }
 
+  /* Escolhe onde marcar o eixo X. Em vez de espalhar rótulos em pontos
+     arbitrários (o que gerava datas soltas tipo "03/2022, 08/2023" sem
+     contexto), marca nas fronteiras naturais do calendário: início de
+     cada ano (granularidade mensal) ou início de cada mês (semanal). */
+  function ticksEixoX(pontos, granularidade, areaW) {
+    const n = pontos.length;
+    if (n === 0) return [];
+
+    if (granularidade === "mes") {
+      let indices = [];
+      pontos.forEach((pt, i) => {
+        if (ordinalParaData(pt[0]).getUTCMonth() === 0) indices.push(i);
+      });
+      if (indices.length === 0) indices = [0, n - 1];
+      return indices.map((i) => ({ i, rotulo: String(ordinalParaData(pontos[i][0]).getUTCFullYear()) }));
+    }
+
+    if (granularidade === "semana") {
+      let indices = [];
+      pontos.forEach((pt, i) => {
+        if (ordinalParaData(pt[0]).getUTCDate() <= 7) indices.push(i);
+      });
+      if (indices.length === 0) indices = [0, n - 1];
+      const maxTicks = Math.max(2, Math.floor(areaW / 55));
+      if (indices.length > maxTicks) {
+        const passo = Math.ceil(indices.length / maxTicks);
+        indices = indices.filter((_, idx) => idx % passo === 0);
+      }
+      return indices.map((i) => {
+        const d = ordinalParaData(pontos[i][0]);
+        return { i, rotulo: String(d.getUTCMonth() + 1).padStart(2, "0") + "/" + d.getUTCFullYear() };
+      });
+    }
+
+    // dia: período curto, mantém alguns pontos espaçados com dd/mm
+    const nTicks = Math.min(5, n);
+    const indicesSet = new Set();
+    for (let k = 0; k < nTicks; k++) indicesSet.add(Math.round((k * (n - 1)) / Math.max(nTicks - 1, 1)));
+    return [...indicesSet].sort((a, b) => a - b).map((i) => ({ i, rotulo: formatarData(pontos[i][0], granularidade) }));
+  }
+
   function compararPlay(a, b) {
     if (a[0] !== b[0]) return a[0] - b[0];
     if (a[1] !== b[1]) return a[1] - b[1];
@@ -353,11 +394,13 @@ HTML_TEMPLATE = """<!doctype html>
 
   function calcularSeriePorBucket(plays, buckets, granularidade) {
     const contagem = new Map();
+    const duracao = new Map();
     for (const p of plays) {
       const b = bucketDe(p[0], granularidade);
       contagem.set(b, (contagem.get(b) || 0) + 1);
+      duracao.set(b, (duracao.get(b) || 0) + (TRACKS[p[3]][3] || 0));
     }
-    return buckets.map((b) => [b, contagem.get(b) || 0]);
+    return buckets.map((b) => [b, contagem.get(b) || 0, duracao.get(b) || 0]);
   }
 
   function calcularTopArtistas(plays, buckets, granularidade, n) {
@@ -369,19 +412,24 @@ HTML_TEMPLATE = """<!doctype html>
     const top = [...totalPorArtista.entries()].sort((a, b) => b[1] - a[1]).slice(0, n).map((e) => e[0]);
 
     const porArtistaBucket = new Map();
-    for (const nome of top) porArtistaBucket.set(nome, new Map());
+    const duracaoPorArtistaBucket = new Map();
+    for (const nome of top) {
+      porArtistaBucket.set(nome, new Map());
+      duracaoPorArtistaBucket.set(nome, new Map());
+    }
     for (const p of plays) {
       const artista = TRACKS[p[3]][2];
       if (!porArtistaBucket.has(artista)) continue;
       const b = bucketDe(p[0], granularidade);
-      const mapa = porArtistaBucket.get(artista);
-      mapa.set(b, (mapa.get(b) || 0) + 1);
+      porArtistaBucket.get(artista).set(b, (porArtistaBucket.get(artista).get(b) || 0) + 1);
+      const durMapa = duracaoPorArtistaBucket.get(artista);
+      durMapa.set(b, (durMapa.get(b) || 0) + (TRACKS[p[3]][3] || 0));
     }
 
     return top.map((nome) => ({
       nome,
       total: totalPorArtista.get(nome),
-      pontos: buckets.map((b) => [b, porArtistaBucket.get(nome).get(b) || 0]),
+      pontos: buckets.map((b) => [b, porArtistaBucket.get(nome).get(b) || 0, duracaoPorArtistaBucket.get(nome).get(b) || 0]),
     }));
   }
 
@@ -456,7 +504,8 @@ HTML_TEMPLATE = """<!doctype html>
 
       pontos.forEach((pt, i) => {
         const [x, y] = coords[i];
-        const titulo = escapar(`${s.nome} — ${formatarData(pt[0], granularidade)}: ${pt[1]}`);
+        const tempo = formatarDuracaoCompacta(pt[2] || 0);
+        const titulo = escapar(`${s.nome} — ${formatarData(pt[0], granularidade)}: ${pt[1]} reprodução(ões) · ${tempo}`);
         partes.push(`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="8" fill="transparent"><title>${titulo}</title></circle>`);
       });
 
@@ -465,13 +514,9 @@ HTML_TEMPLATE = """<!doctype html>
     });
 
     if (nPontos > 0) {
-      const nTicks = Math.min(5, nPontos);
-      const indicesSet = new Set();
-      for (let i = 0; i < nTicks; i++) indicesSet.add(Math.round((i * (nPontos - 1)) / Math.max(nTicks - 1, 1)));
-      [...indicesSet].sort((a, b) => a - b).forEach((i) => {
+      ticksEixoX(series[0].pontos, granularidade, areaW).forEach(({ i, rotulo }) => {
         const x = xDe(i);
-        const bucket = series[0].pontos[i][0];
-        partes.push(`<text x="${x.toFixed(1)}" y="${altura - 6}" text-anchor="middle" class="rotulo-eixo">${formatarData(bucket, granularidade)}</text>`);
+        partes.push(`<text x="${x.toFixed(1)}" y="${altura - 6}" text-anchor="middle" class="rotulo-eixo">${rotulo}</text>`);
       });
     }
 
