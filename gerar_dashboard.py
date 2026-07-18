@@ -51,7 +51,17 @@ def preparar_dados(linhas):
         if track_id not in indice:
             indice[track_id] = len(tracks)
             duration_ms = int(linha["duration_ms"]) if linha.get("duration_ms") else 0
-            tracks.append([track_id, linha["track_name"], linha["artistas"], duration_ms, linha["album"]])
+            tracks.append(
+                [
+                    track_id,
+                    linha["track_name"],
+                    linha["artistas"],
+                    duration_ms,
+                    linha["album"],
+                    linha.get("album_id") or "",
+                    linha.get("album_artista") or "",
+                ]
+            )
 
         plays.append([dt_local.date().toordinal(), dt_local.hour, dt_local.minute, indice[track_id]])
     return tracks, plays
@@ -440,21 +450,26 @@ HTML_TEMPLATE = """<!doctype html>
   }
 
   function topAlbuns(plays, n) {
+    // Agrupa por album_id (o nome do álbum sozinho não é único, e o
+    // "artistas" da faixa pode variar por participação — ex: mesmo
+    // álbum, faixas com features diferentes). Cai pra álbum+artista do
+    // álbum só se faltar o ID (ex: alguma faixa antiga sem backfill).
     const contagem = new Map();
     for (const p of plays) {
       const t = TRACKS[p[3]];
       const album = t[4];
       if (!album) continue;
-      const chave = album + "\\u0001" + t[2];
-      contagem.set(chave, (contagem.get(chave) || 0) + 1);
+      const albumId = t[5];
+      const albumArtista = t[6] || t[2];
+      const chave = albumId || album + "\\u0001" + albumArtista;
+      const atual = contagem.get(chave);
+      if (atual) atual.vezes++;
+      else contagem.set(chave, { album, artista: albumArtista, vezes: 1 });
     }
-    return [...contagem.entries()]
-      .sort((a, b) => b[1] - a[1])
+    return [...contagem.values()]
+      .sort((a, b) => b.vezes - a.vezes)
       .slice(0, n)
-      .map(([chave, vezes]) => {
-        const [album, artistas] = chave.split("\\u0001");
-        return [album, artistas, vezes];
-      });
+      .map((e) => [e.album, e.artista, e.vezes]);
   }
 
   function contarPorArtista(plays) {

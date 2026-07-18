@@ -8,9 +8,10 @@ raiz do repositório (ajuste EXPORT_DIR abaixo se o nome da pasta for
 outro). Depois é só commitar o historico.csv resultante — a Action
 continua rodando normalmente a partir daí.
 
-As linhas importadas ficam sem duration_ms (o export não traz a duração
-"nominal" da faixa, só o ms_played de cada stream) — rode
-setup/preencher_duracao.py em seguida pra preencher isso.
+As linhas importadas ficam sem duration_ms nem album_id (o export não
+traz a duração "nominal" da faixa nem o ID do álbum, só o ms_played de
+cada stream) — rode setup/preencher_duracao.py e setup/preencher_album.py
+em seguida pra preencher isso.
 
 Ignora podcasts/audiobooks (não têm master_metadata_track_name) e
 arquivos de vídeo (Streaming_History_Video_*.json) — focamos só em
@@ -25,7 +26,17 @@ from pathlib import Path
 REPO_DIR = Path(__file__).parent.parent
 CSV_PATH = REPO_DIR / "historico.csv"
 EXPORT_DIR = REPO_DIR / "spotify_history_until_20260712"
-CSV_FIELDS = ["played_at", "track_id", "track_name", "artistas", "album", "duration_ms", "salvo_em"]
+CSV_FIELDS = [
+    "played_at",
+    "track_id",
+    "track_name",
+    "artistas",
+    "album",
+    "album_id",
+    "album_artista",
+    "duration_ms",
+    "salvo_em",
+]
 
 
 def chave_dedup(played_at_str, track_id):
@@ -62,6 +73,8 @@ def carregar_export():
                     "track_name": r["master_metadata_track_name"],
                     "artistas": r.get("master_metadata_album_artist_name") or "",
                     "album": r.get("master_metadata_album_album_name") or "",
+                    "album_id": "",
+                    "album_artista": r.get("master_metadata_album_artist_name") or "",
                     "duration_ms": "",
                 }
             )

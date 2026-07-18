@@ -3,6 +3,7 @@
 __pycache__/
 *.pyc
 .cache
+.claude/
 historico.csv.bak
 
 # export bruto do Spotify (contém IP, país, plataforma etc. — sensível demais pro repo público)

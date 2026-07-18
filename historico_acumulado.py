@@ -35,7 +35,17 @@ load_dotenv()
 
 SCOPE = "user-read-recently-played"
 CSV_PATH = Path(__file__).parent / "historico.csv"
-CSV_FIELDS = ["played_at", "track_id", "track_name", "artistas", "album", "duration_ms", "salvo_em"]
+CSV_FIELDS = [
+    "played_at",
+    "track_id",
+    "track_name",
+    "artistas",
+    "album",
+    "album_id",
+    "album_artista",
+    "duration_ms",
+    "salvo_em",
+]
 
 REFRESH_TOKEN = os.environ.get("SPOTIFY_REFRESH_TOKEN")
 
@@ -87,6 +97,8 @@ def buscar_reproducoes_recentes():
                 "track_name": track["name"],
                 "artistas": ", ".join(a["name"] for a in track["artists"]),
                 "album": track["album"]["name"],
+                "album_id": track["album"]["id"] or "",
+                "album_artista": ", ".join(a["name"] for a in track["album"]["artists"]),
                 "duration_ms": track["duration_ms"],
             }
         )

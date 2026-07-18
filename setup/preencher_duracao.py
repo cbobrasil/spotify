@@ -20,7 +20,17 @@ from spotipy.oauth2 import SpotifyOAuth
 load_dotenv()
 
 CSV_PATH = Path(__file__).parent.parent / "historico.csv"
-CSV_FIELDS = ["played_at", "track_id", "track_name", "artistas", "album", "duration_ms", "salvo_em"]
+CSV_FIELDS = [
+    "played_at",
+    "track_id",
+    "track_name",
+    "artistas",
+    "album",
+    "album_id",
+    "album_artista",
+    "duration_ms",
+    "salvo_em",
+]
 SCOPE = "user-read-recently-played"
 
 auth_manager = SpotifyOAuth(
