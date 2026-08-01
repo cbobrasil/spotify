@@ -1,4 +1,33 @@
 played_at,track_id,track_name,artistas,album,album_id,album_artista,duration_ms,salvo_em
+2026-08-01T18:01:52.996Z,6WohVJvZ6RYmYN8Nxl9VHa,Os Alquimistas Estão Chegando Os Alquimistas,Jorge Ben Jor,A Tabua De Esmeralda,5rcMJNWebtl2r2S18Je1A0,Jorge Ben Jor,195266,2026-08-01T18:01:54.866686+00:00
+2026-08-01T17:58:37.315Z,06Q1W3dLvNk5Gawy7piDu3,Canto Das Três Raças,Clara Nunes,Retratos,1zIUnMFn76fpxrrTtAZ4rX,Clara Nunes,261733,2026-08-01T18:01:54.866686+00:00
+2026-08-01T17:54:14.987Z,5xpumjGGcdWvqWxYVrd7jI,Ovelha Negra,Rita Lee,Fruto Proibido,48SnM2iORxlYTyCefwJZvs,Rita Lee,338933,2026-08-01T18:01:54.866686+00:00
+2026-08-01T17:48:35.516Z,0NLIFSZxPzQhCwnkn5PJYs,"Canta Canta, Minha Gente",Martinho Da Vila,Série Acervo - Martinho Da Vila,62yCZN0N8WWNMSDNiaAWAk,Martinho Da Vila,152266,2026-08-01T18:01:54.866686+00:00
+2026-08-01T17:46:02.776Z,45XopGhwYSgooiewaZNsSd,Olhos Coloridos,Sandra De Sá,Sandra de Sá - 1982,7wB73SnTyYvV1PV0XNP9ol,Sandra De Sá,267266,2026-08-01T18:01:54.866686+00:00
+2026-08-01T17:41:34.867Z,1RJJN0Q4lAwh13t2keNEFK,Banho de Folhas,Luedji Luna,Um Corpo no Mundo,6Qg6H9Uo0Iymf3OROPLSDN,Luedji Luna,389253,2026-08-01T18:01:54.866686+00:00
+2026-08-01T17:35:05.117Z,5nccnfjaIAcVFUsvBbZ5E5,A Menina Dança,Novos Baianos,Acabou Chorare,76iTNsPU1yhKWcQrTc2qdA,Novos Baianos,232200,2026-08-01T18:01:54.866686+00:00
+2026-08-01T17:31:12.466Z,3qs9dRNSLaJ5l8pz2o6PdU,Partilhar,Rubel,Casas,1luu1JuZyWqBFNcssZBK8o,Rubel,337308,2026-08-01T18:01:54.866686+00:00
+2026-08-01T17:25:34.755Z,4fquZvrjr14AEcb2YZPQ0Q,Toda Menina Baiana,Gilberto Gil,Realce,1Ve2jiGMVJz5tDxZDYnBLL,Gilberto Gil,226640,2026-08-01T18:01:54.866686+00:00
+2026-08-01T17:21:47.495Z,1j5N75y26nH2l0uPa9JlKe,O Sol,Vitor Kley,Adrenalizou,7zI1acetTFBNiKnl5kBWQi,Vitor Kley,211447,2026-08-01T18:01:54.866686+00:00
+2026-08-01T17:18:15.806Z,00Xcf47ApZUt6omH2RgdUM,Kilario,Di Melo,Di Melo,2Uri1KkpSo6YOnjLC4ly7F,Di Melo,167533,2026-08-01T18:01:54.866686+00:00
+2026-08-01T17:15:27.797Z,54BLy0zSiBUOINjOwMC3M2,Tropicana (Morena Tropicana),Alceu Valença,20 Grandes Sucessos De Alceu Valença,5zSPeLOror6UiYeodh4Bs9,Alceu Valença,231000,2026-08-01T18:01:54.866686+00:00
+2026-08-01T17:11:36.014Z,5iRaOjjwXRAFWQCxCR6IY6,Lucro (Descomprimindo),BaianaSystem,Duas Cidades,59MZTJ4Q6L1GYh2RPlnGSu,BaianaSystem,246280,2026-08-01T18:01:54.866686+00:00
+2026-08-01T17:07:29.354Z,2qcfKvkTopzpSOeLW9AvyM,Fullgás,Marina Lima,Fullgás,3CgjFI4cjXwJEf7EQaXJQP,Marina Lima,247533,2026-08-01T18:01:54.866686+00:00
+2026-08-01T17:03:21.195Z,3cR6v2bOwqi7znC8P5Vs1T,Maracatu Atômico,"Chico Science, Nação Zumbi",Afrociberdelia,3cG4WKesy6hUXEPfPcdxs6,"Chico Science, Nação Zumbi",284173,2026-08-01T18:01:54.866686+00:00
+2026-08-01T16:58:36.674Z,6rRXVfwYxeSgcTy83vbudD,Essa Moça Tá Diferente,Chico Buarque,A Arte De Chico Buarque,6buA4UqZTeUKUG2xRAlOcC,Chico Buarque,164893,2026-08-01T18:01:54.866686+00:00
+2026-08-01T16:55:51.216Z,661Ns9G25zHdih4qVshBO7,Anunciação,Alceu Valença,20 Grandes Sucessos De Alceu Valença,5zSPeLOror6UiYeodh4Bs9,Alceu Valença,288160,2026-08-01T18:01:54.866686+00:00
+2026-08-01T16:51:02.549Z,3BpiaGyTIb7VIoAYbvSzTH,Réu Confesso,Tim Maia,Tim Maia 1973,6gK1Uf1uZolqGBibGaW5qK,Tim Maia,217604,2026-08-01T18:01:54.866686+00:00
+2026-08-01T16:47:24.496Z,5G5uIDkQytLq7yOacUcjJ9,Nem Vem Que Não Tem - Ao Vivo,"Wilson Simonal, Som Tres",Nem Vem Que Não Tem,2T4SgxLYyvVJxqwWGk4Pjq,Wilson Simonal,152680,2026-08-01T18:01:54.866686+00:00
+2026-08-01T16:44:51.255Z,5JSNcb3MwTxkDH4mrYKnHG,Trem Das Onze,Adoniran Barbosa,Para Sempre,377Lmb4EKi6WZAuTdvm4RF,Adoniran Barbosa,185826,2026-08-01T18:01:54.866686+00:00
+2026-08-01T16:41:45.137Z,2wL88cvKXUOfHuYVd62hji,Palco,Gilberto Gil,Luar,3qoUU8sm4eBT5POFHQSl5L,Gilberto Gil,266173,2026-08-01T18:01:54.866686+00:00
+2026-08-01T16:37:18.472Z,0a3dxCb5m9uJ7J66d2h63u,Mistério do Planeta,Novos Baianos,Acabou Chorare,76iTNsPU1yhKWcQrTc2qdA,Novos Baianos,217960,2026-08-01T18:01:54.866686+00:00
+2026-08-01T16:33:39.993Z,2kXkaplZ6HdXz5XYBtdunj,Acenda o farol,Tim Maia,Brazilian Café,5U7NjzLEWV6OtAdaKrwfIg,Various Artists,192026,2026-08-01T18:01:54.866686+00:00
+2026-08-01T16:30:29.145Z,0m3hiKjI2QGSKxvG732Ekq,Tiro Ao Álvaro,"Elis Regina, Adoniran Barbosa",The Essential,3us4cLbfx4qKTomS5Z9ggz,Elis Regina,162360,2026-08-01T18:01:54.866686+00:00
+2026-08-01T16:27:46.164Z,2GAFZG9Z7UGS1iMm4Idrnr,Apesar De Você,"Chico Buarque, MPB4, Quarteto Em Cy",Chico Buarque,4K3E5bhJb92E7eyeIJ16QR,Chico Buarque,235546,2026-08-01T18:01:54.866686+00:00
+2026-08-01T16:23:50.024Z,0c8aqUb7e0K9uNhxejfV23,La Belle De Jour,Alceu Valença,2 Em 1,63D15Du0fgLFQzDUKVKq2J,Alceu Valença,269426,2026-08-01T18:01:54.866686+00:00
+2026-08-01T16:19:20.244Z,0lGEWOZvMexZFXckBJxlVO,A Minha Menina,Os Mutantes,"""Os Mutantes""",0RBkIFbQy91qv8Tqja20og,Os Mutantes,284986,2026-08-01T18:01:54.866686+00:00
+2026-08-01T16:14:34.709Z,73TTpGtSDdXRP8J7loLifZ,Que Beleza,Tim Maia,World Psychedelic Classics 4: Nobody Can Live Forever: The Existential Soul of Tim Maia,59NOU4R72nphHRtwQlGfjJ,Tim Maia,208573,2026-08-01T18:01:54.866686+00:00
+2026-08-01T16:11:05.795Z,399Hm1oqfzzQaZRu3CtVMb,Take It Easy My Brother Charles,Jorge Ben Jor,Jorge Ben,3V3XJ3Sh62jPUYUMSQ1Tsf,Jorge Ben Jor,155666,2026-08-01T18:01:54.866686+00:00
 2026-08-01T14:53:35.628Z,4uIXvy8PbYLEhs0PZgaP8p,Delirium (feat. Mark E. Smith),"Gorillaz, Mark E. Smith",The Mountain,1RvJmGd47lKS4XMXs9j8hD,Gorillaz,232173,2026-08-01T16:01:23.801744+00:00
 2026-08-01T14:49:43.161Z,68nwsIBVoGDO38VKhtvKzD,The Plastic Guru (feat. Johnny Marr and Anoushka Shankar),"Gorillaz, Johnny Marr, Anoushka Shankar",The Mountain,1RvJmGd47lKS4XMXs9j8hD,Gorillaz,194969,2026-08-01T16:01:23.801744+00:00
 2026-08-01T14:45:52.156Z,5FH7DTLl8WQNkZs00Cb3EM,"The Empty Dream Machine (feat. Black Thought, Johnny Marr and Anoushka Shankar)","Gorillaz, Black Thought, Johnny Marr, Anoushka Shankar",The Mountain,1RvJmGd47lKS4XMXs9j8hD,Gorillaz,340874,2026-08-01T16:01:23.801744+00:00
