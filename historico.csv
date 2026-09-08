@@ -1,4 +1,35 @@
 played_at,track_id,track_name,artistas,album,album_id,album_artista,duration_ms,salvo_em
+2026-09-08T13:45:13.703Z,4JbyNMvp3BqVILVy4Bbevf,The Happy Dictator (feat. Sparks),"Gorillaz, Sparks",The Mountain,1RvJmGd47lKS4XMXs9j8hD,Gorillaz,284775,2026-09-08T14:56:46.472741+00:00
+2026-09-08T13:40:29.314Z,6VflG4mpZSlpKnqNRL3NO9,"The Moon Cave (feat. Asha Puthli, Bobby Womack, Dave Jolicoeur, Jalen Ngonda and Black Thought)","Gorillaz, Asha Puthli, Bobby Womack, Dave Jolicoeur, Jalen Ngonda, Black Thought",The Mountain,1RvJmGd47lKS4XMXs9j8hD,Gorillaz,297787,2026-09-08T14:56:46.472741+00:00
+2026-09-08T13:35:31.309Z,3MebYJnEDK4XdnCj3VMLjL,"The Mountain (feat. Dennis Hopper, Ajay Prasanna, Anoushka Shankar, Amaan Ali Bangash and Ayaan Ali Bangash)","Gorillaz, Dennis Hopper, Ajay Prasanna, Anoushka Shankar, Amaan Ali Bangash, Ayaan Ali Bangash",The Mountain,1RvJmGd47lKS4XMXs9j8hD,Gorillaz,290621,2026-09-08T14:56:46.472741+00:00
+2026-09-08T13:21:12.533Z,1nHtbquO2mRuEo9y2epJ3y,fell in love,lusha,broken world,3IwBw5PabQopnHG08NqThL,lusha,172721,2026-09-08T14:56:46.472741+00:00
+2026-09-08T13:17:56.802Z,7l1jlfybSSAGEXpG8GCP7L,the sound of garden,"ddc., fleece, sogni",soothing breeze,3U5IXAObtsdk809C6GXzUv,"ddc., fleece, sogni",165276,2026-09-08T14:56:46.472741+00:00
+2026-09-08T13:15:05.128Z,7d7y2JnDs6YyEF7615uW7E,Since When,Dpsht,Since When,2MDTi396LFLo6phItbGW8m,Dpsht,92142,2026-09-08T14:56:46.472741+00:00
+2026-09-08T13:13:32.578Z,6rXdmMil3DpNl1YPB7BaK3,peaceful retreat,mellow fox,peaceful retreat,6YQVMzmgMWePPETt41Vzrv,mellow fox,101694,2026-09-08T14:56:46.472741+00:00
+2026-09-08T13:11:50.522Z,2ae9ecoLq8RRI8hxfiKzb4,enchanted land,"ddc., fleece, sogni",soothing breeze,3U5IXAObtsdk809C6GXzUv,"ddc., fleece, sogni",165537,2026-09-08T14:56:46.472741+00:00
+2026-09-08T12:49:12.404Z,2ae9ecoLq8RRI8hxfiKzb4,enchanted land,"ddc., fleece, sogni",soothing breeze,3U5IXAObtsdk809C6GXzUv,"ddc., fleece, sogni",165537,2026-09-08T14:56:46.472741+00:00
+2026-09-08T12:37:45.681Z,23mXLvIIhGXrBfMGcAG71i,the day we met,"ddc., fleece, sogni",soothing breeze,3U5IXAObtsdk809C6GXzUv,"ddc., fleece, sogni",165537,2026-09-08T14:56:46.472741+00:00
+2026-09-08T12:34:59.753Z,1nCVWH6EUgjiMML35sXuwt,call you mine,lusha,broken world,3IwBw5PabQopnHG08NqThL,lusha,158955,2026-09-08T14:56:46.472741+00:00
+2026-09-08T12:32:20.448Z,01ce5x1HOLG6XKD1Jgsdsw,Fresh,shen key,Fresh,1bS65MTkj08tEFGcdf08fl,shen key,126000,2026-09-08T14:56:46.472741+00:00
+2026-09-08T12:30:14.074Z,3vxWqWJazDyzWX3ERQi7ea,nightfall,"sogni, guleum, cloudoris",secret garden,1h6oXNtiHZeYfYgoTIXxQf,"sogni, guleum, cloudoris",164951,2026-09-08T14:56:46.472741+00:00
+2026-09-08T12:27:28.778Z,0wtXAu3sb3uJin9uzKB2XW,Macchiato,"Dpsht, tenkousei.",Macchiato,1vrc6twcNejVKGHMMGKkfD,"Dpsht, tenkousei.",112272,2026-09-08T14:56:46.472741+00:00
+2026-09-08T12:25:36.090Z,16dwsPwYeBt9Gi1U3EkkMm,last light left,vini,dream café,6jZZbmBSYamn35OFQC45nZ,vini,115382,2026-09-08T14:56:46.472741+00:00
+2026-09-08T12:23:40.326Z,3gj6j458AIpsg5mDPFarft,will you fly with me,"guleum, cloudoris, nemui",lazy winter,4J6z9wyKbyIGH223I6hSf1,"guleum, cloudoris, nemui",138750,2026-09-08T14:56:46.472741+00:00
+2026-09-08T12:21:21.214Z,5RA1be4ZzXVpOiNcPXIR1e,paper moon,vini,quiet side,1xUs22aqJTwwOlaZELwKKV,vini,138736,2026-09-08T14:56:46.472741+00:00
+2026-09-08T12:19:02.172Z,3WWiacjJ6bVwOz8aSywkDI,a lonely night,lusha,broken world,3IwBw5PabQopnHG08NqThL,lusha,138396,2026-09-08T14:56:46.472741+00:00
+2026-09-08T12:16:43.380Z,7xKjf3fMM3rdrbvmQUD6GX,flow,"sogni, guleum, cloudoris",secret garden,1h6oXNtiHZeYfYgoTIXxQf,"sogni, guleum, cloudoris",135615,2026-09-08T14:56:46.472741+00:00
+2026-09-08T12:14:27.361Z,3s66gdZkMGrpjY04UyU5yX,My Treat,Trish Lupin,My Treat,2YNRCzDh6HNNQmDFOOLJu5,Trish Lupin,122897,2026-09-08T14:56:46.472741+00:00
+2026-09-08T12:12:24.091Z,3cMtZwUNHojxcG3RwW8tWG,times of wind,"ddc., fleece, sogni",daydream,4J04asMI7ZClXLFy5EaC2l,"ddc., fleece, sogni",171743,2026-09-08T14:56:46.472741+00:00
+2026-09-08T12:09:31.920Z,19dmUOqVq2CmgrGf4Itmk8,night sky,"cloudoris, nemui, ddc.",just a dream,7vGSympRQ5O7FPNvZGlahQ,"cloudoris, nemui, ddc.",146064,2026-09-08T14:56:46.472741+00:00
+2026-09-08T12:07:05.469Z,75aMPmBFueh3IRHWsAtZPQ,Let It Slide,Moods,Music Ruined My Life,3qcxlqf6NWGxMoRcoetCTO,Moods,184668,2026-09-08T14:56:46.472741+00:00
+2026-09-08T12:04:00.396Z,3AgSLxeyCOefRhYmPdaGHE,goodbye,lusha,broken world,3IwBw5PabQopnHG08NqThL,lusha,131683,2026-09-08T14:56:46.472741+00:00
+2026-09-08T12:01:48.271Z,3Q8JhPtXkTmqZtUe1vw7Cm,blue notes,Peach,night is kind,47vU9Gd5iFvf0yQQtvNVsq,Peach,154984,2026-09-08T14:56:46.472741+00:00
+2026-09-08T11:59:12.866Z,0USWgN8iZIcxZd2Zu7tr5N,secret garden,"sogni, guleum, cloudoris",secret garden,1h6oXNtiHZeYfYgoTIXxQf,"sogni, guleum, cloudoris",193476,2026-09-08T14:56:46.472741+00:00
+2026-09-08T11:55:58.981Z,5gwadFQQWCAMxp4dOdIegZ,sweet scent,"guleum, cloudoris, nemui",lazy winter,4J6z9wyKbyIGH223I6hSf1,"guleum, cloudoris, nemui",138332,2026-09-08T14:56:46.472741+00:00
+2026-09-08T11:53:40.278Z,240f182b8ou6UWC8yIDbj8,blue sweater,vini,quiet side,1xUs22aqJTwwOlaZELwKKV,vini,141061,2026-09-08T14:56:46.472741+00:00
+2026-09-08T11:51:18.907Z,2IkTN69JrG0U96p1vNqqfl,walk and hum,Goofy Cat,sweet loop,3I9RhG5kzNvdbXQnPSeCmn,Goofy Cat,154435,2026-09-08T14:56:46.472741+00:00
+2026-09-08T11:48:44.075Z,0BlFv1m2n92GGUxUmx2ghv,when i close my eyes,"nemui, ddc., fleece",time for bed,6Mwt5Z2mJBcPSpnOuD7UXw,"nemui, ddc., fleece",165238,2026-09-08T14:56:46.472741+00:00
+2026-09-08T11:45:58.467Z,1K7x4P2uwCW0NJLq5FTV4W,childhood dreams,"ddc., fleece, sogni",daydream,4J04asMI7ZClXLFy5EaC2l,"ddc., fleece, sogni",123207,2026-09-08T14:56:46.472741+00:00
 2026-09-07T18:23:22.684Z,68nwsIBVoGDO38VKhtvKzD,The Plastic Guru (feat. Johnny Marr and Anoushka Shankar),"Gorillaz, Johnny Marr, Anoushka Shankar",The Mountain,1RvJmGd47lKS4XMXs9j8hD,Gorillaz,194969,2026-09-07T19:38:45.229223+00:00
 2026-09-07T18:03:52.250Z,1WUBWl3jNNYo0hrPTrA5D0,The Manifesto (feat. Trueno and Proof),"Gorillaz, Trueno, Proof",The Mountain,1RvJmGd47lKS4XMXs9j8hD,Gorillaz,439125,2026-09-07T19:38:45.229223+00:00
 2026-09-07T17:56:32.798Z,5FH7DTLl8WQNkZs00Cb3EM,"The Empty Dream Machine (feat. Black Thought, Johnny Marr and Anoushka Shankar)","Gorillaz, Black Thought, Johnny Marr, Anoushka Shankar",The Mountain,1RvJmGd47lKS4XMXs9j8hD,Gorillaz,340874,2026-09-07T19:38:45.229223+00:00
