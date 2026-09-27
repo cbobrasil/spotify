@@ -1,4 +1,43 @@
 played_at,track_id,track_name,artistas,album,album_id,album_artista,duration_ms,salvo_em
+2026-09-27T04:06:26.231Z,0lGEWOZvMexZFXckBJxlVO,A Minha Menina,Os Mutantes,"""Os Mutantes""",0RBkIFbQy91qv8Tqja20og,Os Mutantes,284986,2026-09-27T07:41:52.155067+00:00
+2026-09-27T03:52:57.140Z,7MofMXf08ByS7FGDW5Nuwx,Barato Total,Gal Costa,Cantar,4jY3KTb8z9OZiIM92pTuNe,Gal Costa,231266,2026-09-27T07:41:52.155067+00:00
+2026-09-27T03:49:05.409Z,6m0KnKJff6xxtKalORoeOO,O Canto Da Cidade,Daniela Mercury,O Canto Da Cidade,4VkGbhnPhrdY9Xfrf0E9OU,Daniela Mercury,204026,2026-09-27T07:41:52.155067+00:00
+2026-09-27T03:45:40.978Z,7fs6csqE3EltCrESv6cn0J,Disritmia,Martinho Da Vila,Martinho da Vila,6ime25jnzjF1foE0e5RCYB,Martinho Da Vila,144760,2026-09-27T07:41:52.155067+00:00
+2026-09-27T03:43:15.857Z,661Ns9G25zHdih4qVshBO7,Anunciação,Alceu Valença,20 Grandes Sucessos De Alceu Valença,5zSPeLOror6UiYeodh4Bs9,Alceu Valença,288160,2026-09-27T07:41:52.155067+00:00
+2026-09-27T03:38:27.262Z,7eR5i0UNKTG57MMLZJpeB6,A Festa Do Santo Reis,Tim Maia,Tim Maia 1971,1crN3RnAw8N6BztzuEAo8A,Tim Maia,160685,2026-09-27T07:41:52.155067+00:00
+2026-09-27T03:35:46.210Z,2OmW34Xkvsy1VCOZ4OZhKv,O Telefone Tocou Novamente,"Jorge Ben Jor, Trio Mocoto",Força Bruta,12G0eYu3u8ZwdstT1flUXw,Jorge Ben Jor,228946,2026-09-27T07:41:52.155067+00:00
+2026-09-27T03:31:56.855Z,0SfcG65T1KKCj5NQffpzQR,Não Quero Dinheiro (Só Quero Amar),Tim Maia,Tim Maia 1971,1crN3RnAw8N6BztzuEAo8A,Tim Maia,153790,2026-09-27T07:41:52.155067+00:00
+2026-09-27T03:29:22.633Z,6pok4kgIWSBFIoPZeKrv7L,Não Me Entrego Pros Caretas,Lamparina,Não Me Entrego Pros Caretas,560jeL82N1TmKINoprN8P2,Lamparina,196153,2026-09-27T07:41:52.155067+00:00
+2026-09-27T03:26:06.035Z,2ma8V5vEOfCuyqZ0V8HAq3,Toda Forma de Amor,Lulu Santos,Toda Forma De Amor,4WXHWxOTHQM2VHwlIoe4vJ,Lulu Santos,225760,2026-09-27T07:41:52.155067+00:00
+2026-09-27T03:22:19.851Z,2zvTzaa6cOB8YQ8x3GUndf,Lindo Lago Do Amor,Gonzaguinha,Bis (Dois CDs),4aqhBQ04DpXEy9PKRKHvrq,Gonzaguinha,249960,2026-09-27T07:41:52.155067+00:00
+2026-09-27T03:18:09.506Z,4XlKmVCdUrFnQnKJvV8sOW,Eu também quero beijar,Pepeu Gomes,Calor Humano,5ZwsLgy1XUPIrijDOQjkkM,Pepeu Gomes,244826,2026-09-27T07:41:52.155067+00:00
+2026-09-27T03:14:04.263Z,0a3dxCb5m9uJ7J66d2h63u,Mistério do Planeta,Novos Baianos,Acabou Chorare,76iTNsPU1yhKWcQrTc2qdA,Novos Baianos,217960,2026-09-27T07:41:52.155067+00:00
+2026-09-27T03:10:25.878Z,3zcBNmJH6ToRCI0WNEIuES,Esperando na janela,Gilberto Gil,"As canções de eu, tu, eles",5tPEQtkCVKj17B9RlxDIKC,Gilberto Gil,256693,2026-09-27T07:41:52.155067+00:00
+2026-09-27T03:06:08.734Z,2HYFukiwgev8c1OeeSCtcs,Divino Maravilhoso,Gal Costa,Divino Maravilhoso - Gal Costa Interpreta Caetano Veloso (CD 1),0ccBMRhVvi2lQT6DVWG79A,Gal Costa,259666,2026-09-27T07:41:52.155067+00:00
+2026-09-27T03:01:48.656Z,1RJJN0Q4lAwh13t2keNEFK,Banho de Folhas,Luedji Luna,Um Corpo no Mundo,6Qg6H9Uo0Iymf3OROPLSDN,Luedji Luna,389253,2026-09-27T07:41:52.155067+00:00
+2026-09-27T02:55:18.958Z,4wUzJax4y4a6jIhbF28LoC,Sonho Meu,"Sambabook, Dona Ivone Lara, Caetano Veloso, Martinho Da Vila, Diogo Nogueira, Bruno Castro, Grupo Fundo De Quintal, Zélia Duncan, Xande de Pilares, Elba Ramalho, Reinaldo, Lu Carvalho, Arlindo Cruz, Áurea Martins, Maria Bethânia, Aline Calixto, Luiza Dionísio, Vanessa Da Mata, Criolo, Hamilton De Holanda, Teresa Cristina, Zeca Pagodinho, Wilson Das Neves, Leci Brandao, Adriana Calcanhotto, Mariene De Castro, Carminho","Sambabook Dona Ivone Lara, Vol. 2",78i8JybhSpYMr19RxP73EY,Sambabook,228706,2026-09-27T07:41:52.155067+00:00
+2026-09-27T02:51:29.885Z,06Q1W3dLvNk5Gawy7piDu3,Canto Das Três Raças,Clara Nunes,Retratos,1zIUnMFn76fpxrrTtAZ4rX,Clara Nunes,261733,2026-09-27T07:41:52.155067+00:00
+2026-09-27T02:47:07.721Z,1j5N75y26nH2l0uPa9JlKe,O Sol,Vitor Kley,Adrenalizou,7zI1acetTFBNiKnl5kBWQi,Vitor Kley,211447,2026-09-27T07:41:52.155067+00:00
+2026-09-27T02:43:35.862Z,6owwZC8gUvrBuygvOHaYXb,Mania De Você,"Rita Lee, Roberto De Carvalho",Rita Lee,1WN3eZOVfULIjZfxdsfoMO,Rita Lee,295106,2026-09-27T07:41:52.155067+00:00
+2026-09-27T02:38:40.358Z,5JmBuvUAjNnzSPIOF4Z6ZQ,Sandra,Gilberto Gil,Refavela,7gl0SUDwWTOdUehXFypXna,Gilberto Gil,287546,2026-09-27T07:41:52.155067+00:00
+2026-09-27T02:33:52.412Z,76bNcEBsBn8gbzwcU1QlRK,Canto De Ossanha,"Baden Powell, Vinícius de Moraes",Os Afro - Sambas De Baden E Vinícius,7ArWgeKnsNsaOyvFl2yNYd,"Baden Powell, Vinícius de Moraes",204293,2026-09-27T07:41:52.155067+00:00
+2026-09-27T02:30:27.629Z,0Lcycsddsg3T9F9sqDTWgx,Vamos fugir (Participação especial de The Wailers),"Gilberto Gil, The Wailers",Raça humana,09BGgHwf5W2jnE5UeJuuCk,Gilberto Gil,289413,2026-09-27T07:41:52.155067+00:00
+2026-09-27T02:25:37.802Z,3qs9dRNSLaJ5l8pz2o6PdU,Partilhar,Rubel,Casas,1luu1JuZyWqBFNcssZBK8o,Rubel,337308,2026-09-27T07:41:52.155067+00:00
+2026-09-27T02:20:00.036Z,2ZM9Ee68hmUuztCIdYVetd,Cadê Tereza,Jorge Ben Jor,Jorge Ben,3V3XJ3Sh62jPUYUMSQ1Tsf,Jorge Ben Jor,203040,2026-09-27T07:41:52.155067+00:00
+2026-09-27T02:16:36.606Z,6b493rYJ4xkaNXDiVGHsK3,Eu Quero É Botar Meu Bloco Na Rua,Sérgio Sampaio,Chacrinha - O Musical,0BA8MBSI22zv5YhFeAUEHe,Various Artists,278226,2026-09-27T07:41:52.155067+00:00
+2026-09-27T02:11:58.003Z,3fxlgsDxLanF9ryJea28Ic,Como Vovó Já Dizia (Óculos Escuros),Raul Seixas,20 Grandes Sucessos De Raul Seixas,1HuPsuxRE5XbqcAmVhFJrU,Raul Seixas,201706,2026-09-27T07:41:52.155067+00:00
+2026-09-27T02:08:35.877Z,6U03Orwr5Dxt8jahLnQpYV,"Mas, Que Nada!",Jorge Ben Jor,Samba Esquema Novo,3xWp6y0HGsHZlXljNs7VRy,Jorge Ben Jor,179293,2026-09-27T07:41:52.155067+00:00
+2026-09-27T02:05:36.130Z,0c8aqUb7e0K9uNhxejfV23,La Belle De Jour,Alceu Valença,2 Em 1,63D15Du0fgLFQzDUKVKq2J,Alceu Valença,269426,2026-09-27T07:41:52.155067+00:00
+2026-09-27T01:55:49.336Z,01mbH2pSWyHgcmWKDbZU5b,Girassol,Alceu Valença,Sol e Chuva,7jayGTnTrgeSEqMyTJU0nB,Alceu Valença,181400,2026-09-27T07:41:52.155067+00:00
+2026-09-27T01:52:47.564Z,4qvUtYRNwmFzfJ2loWkQCH,Vilarejo,Marisa Monte,Infinito Particular,4vJUBwgIaG2AD5rP32O730,Marisa Monte,209546,2026-09-27T07:41:52.155067+00:00
+2026-09-27T01:49:17.612Z,4P6E31E1rAZSjav0fkKtHs,Garotos,Kid Abelha,Educação Sentimental,6A2Obljp59egehWDpxxX8C,Kid Abelha,264133,2026-09-27T07:41:52.155067+00:00
+2026-09-27T01:32:17.782Z,7D9BJEcWwRqvQVqPbj1dbF,Sinais de fogo,Preta Gil,Prét-A-Porter,0OvDmKn0biodngzwetYNvM,Preta Gil,216226,2026-09-27T07:41:52.155067+00:00
+2026-09-27T01:28:41.143Z,1mK7rqBmWWFvU1huYnsPGq,Sonífera ilha,Titãs,84 94 - Volume 1,7ve69fgxLJKauNa5cGelKV,Titãs,174973,2026-09-27T07:41:52.155067+00:00
+2026-09-27T01:25:45.749Z,2DREhftHdD8pRmNdSs6nyF,Sangue latino,Secos & Molhados,A volta de Secos & Molhados,4rNGFFaXZ7l0Vg6QrcHcUi,Secos & Molhados,128000,2026-09-27T07:41:52.155067+00:00
+2026-09-27T01:23:37.363Z,6VeAUISn8bNaW4OUa2oWi2,Azul,Gal Costa,Minha Voz,6DPcjdQnwOicjXIk8rAnxY,Gal Costa,223800,2026-09-27T07:41:52.155067+00:00
+2026-09-27T01:19:53.162Z,7oo3L1ZPEQSavDVSnlOvDa,Apenas Um Rapaz Latino Americano,Belchior,Alucinacao,2AwtTIdUFaUl69alioeFut,Belchior,258026,2026-09-27T07:41:52.155067+00:00
+2026-09-27T01:14:51.176Z,2ltHN1EsTlBvfIlC7e0XRL,Dois Rios,Skank,Cosmotron,77NWIVF4t4GKefwF2OIldS,Skank,282066,2026-09-27T07:41:52.155067+00:00
+2026-09-27T01:10:08.767Z,7fs6csqE3EltCrESv6cn0J,Disritmia,Martinho Da Vila,Martinho da Vila,6ime25jnzjF1foE0e5RCYB,Martinho Da Vila,144760,2026-09-27T07:41:52.155067+00:00
 2026-09-27T01:05:27.882Z,73TTpGtSDdXRP8J7loLifZ,Que Beleza,Tim Maia,World Psychedelic Classics 4: Nobody Can Live Forever: The Existential Soul of Tim Maia,59NOU4R72nphHRtwQlGfjJ,Tim Maia,208573,2026-09-27T01:07:25.207806+00:00
 2026-09-27T01:01:58.915Z,70mpYOq7kaEVOZD6IIJAaw,A Gira,Trio Ternura,Trio Ternura (Compacto 1973),0LtKGt7sB3pSrduK8trZD8,Trio Ternura,183053,2026-09-27T01:07:25.207806+00:00
 2026-09-27T00:58:55.437Z,56CE8SdkpSl9OKbF14FALz,Na Estrada,Marisa Monte,Verde Anil Amarelo Cor de Rosa e Carvão,26OYzOWjelS4qNuP27Ac6i,Marisa Monte,214866,2026-09-27T01:07:25.207806+00:00
